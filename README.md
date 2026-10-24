@@ -9,6 +9,7 @@ GitHub的“Code → Download ZIP”和Release自动的“Source code”只有�
 
 最简单的方式是只先下载 **Download-Release.cmd** 和 **Download-Release.ps1** 到同一短目录（例如 `D:\LiangHeDownload`），双击CMD自动下载全部37个小分块并校验、还原、自检。
 自检通过后运行恢复目录的 `量禾混剪.exe`。网络中断后再次运行会复用已校验的小分块；也可手动下载全部47个附件后运行Restore-Release.cmd。
+下载阶段报错先看同目录 `download-report.json`；已经进入还原阶段再看 `LiangHeMix-restore-report-*.json`。
 第一次可以让WorkBuddy负责检测，以后直接运行软件。不需要用户预装Python、CUDA或7-Zip。系统缺组件时使用随包官方安装器。
 
 目标为Windows10 22H2/Windows11 Intel/AMD x64，默认CPU。用户在软件界面填写自己的DeepSeek/GLM/Fish Key，云服务费用由自己的账号承担。
