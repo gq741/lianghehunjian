@@ -1,0 +1,9 @@
+Flask>=3.1,<4
+pywebview>=6,<7
+yt-dlp>=2026.1
+faster-whisper>=1.2,<2
+# faster-whisper 1.2.1 still passes metadata_errors, removed in PyAV 19.
+av>=18.1,<19
+msgpack>=1,<2
+
+rapidocr-onnxruntime==1.4.4

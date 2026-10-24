@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.venv/
+runtime/
+bin/
+models/
+installers/
+third-party-sources/
+logs/
+*.zip
+*.zip.part*
+settings.json
+secrets.dpapi
+state.sqlite*
+.env
+release-tools/evidence/

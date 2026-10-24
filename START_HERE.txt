@@ -1,0 +1,11 @@
+量禾混剪 Windows x64 · 2026.10.24
+
+1. 下载本Release全部12个附件到同一短路径目录，例如 D:\LiangHeDownload。
+2. 4个.zip.part01～part04是同一软件的分块，不单独解压；不能只下载其中一个。
+3. 双击 Restore-Release.cmd：自动校验、还原LiangHeMix文件夹并免费自检。
+4. 全部PASS后打开 LiangHeMix\量禾混剪.exe，填自己的API Key，选择素材/输出目录。
+5. 如果系统缺组件，按WORKBUDDY.md使用随包官方安装器，之后重新自检。
+
+也可以把此文件夹交给WorkBuddy，让它先读取WORKBUDDY.md后操作。
+建议至少12GB可用空间。不要下载GitHub自动的Source code代替软件包。
+允许使用软件制作商业带货视频；禁止售卖软件和收费部署。第三方依赖继续按原许可证。

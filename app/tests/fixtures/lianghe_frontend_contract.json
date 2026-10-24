@@ -1,0 +1,1442 @@
+{
+  "version": 2,
+  "html": {
+    "ids": {
+      "i-grid": "symbol",
+      "i-cut": "symbol",
+      "i-settings": "symbol",
+      "i-folder": "symbol",
+      "i-refresh": "symbol",
+      "i-link": "symbol",
+      "i-play": "symbol",
+      "i-close": "symbol",
+      "i-arrow": "symbol",
+      "i-check": "symbol",
+      "i-film": "symbol",
+      "i-text": "symbol",
+      "i-alert": "symbol",
+      "i-music": "symbol",
+      "asset-count": "span",
+      "active-count": "span",
+      "connection-status": "span",
+      "connection-text": "span",
+      "main": "main",
+      "page-name": "strong",
+      "refresh-state": "button",
+      "connection-error": "div",
+      "page-library": "section",
+      "library-title": "h1",
+      "library-tab-local": "button",
+      "library-tab-douyin": "button",
+      "library-panel-local": "div",
+      "folder-form": "form",
+      "library-folder": "input",
+      "choose-folder": "button",
+      "scan-folder": "button",
+      "library-panel-douyin": "div",
+      "download-form": "form",
+      "download-link": "textarea",
+      "clear-download": "button",
+      "download-destination": "span",
+      "queue-download": "button",
+      "select-all": "input",
+      "library-summary": "span",
+      "delete-selected-assets": "button",
+      "asset-grid": "div",
+      "library-empty": "div",
+      "library-empty-title": "h2",
+      "library-empty-description": "p",
+      "empty-choose-folder": "button",
+      "library-queue": "details",
+      "download-count": "span",
+      "download-page-info": "span",
+      "download-prev": "button",
+      "download-next": "button",
+      "open-download-logs": "button",
+      "download-jobs": "div",
+      "selection-count": "strong",
+      "selection-sources": "span",
+      "go-mix": "button",
+      "page-mix": "section",
+      "mix-title": "h1",
+      "run-preflight": "button",
+      "preflight-status": "p",
+      "product-info-heading": "h2",
+      "product-form": "form",
+      "product-url": "input",
+      "clear-product": "button",
+      "paste-product": "button",
+      "read-product": "button",
+      "product-read-status": "p",
+      "product-card": "div",
+      "product-title": "strong",
+      "prepare-form": "form",
+      "mix-selection-count": "strong",
+      "mix-selection-names": "span",
+      "target-seconds": "input",
+      "output-count": "input",
+      "duration-hint": "span",
+      "prepare-button": "button",
+      "music-panel": "details",
+      "music-current-name": "span",
+      "disable-bgm": "button",
+      "music-status": "p",
+      "music-error": "p",
+      "set-bgm_path": "input",
+      "set-bgm_gain": "input",
+      "save-bgm-gain": "button",
+      "music-folder": "input",
+      "choose-bgm": "button",
+      "scan-music": "button",
+      "music-candidates": "div",
+      "import-music": "button",
+      "refresh-music": "button",
+      "music-tracks": "div",
+      "draft-workspace": "div",
+      "draft-meta": "span",
+      "draft-select": "select",
+      "draft-editor-help": "div",
+      "whole-migration-notice": "p",
+      "draft-history-warning": "p",
+      "draft-timing-status": "p",
+      "draft-segments": "div",
+      "whole-duration": "p",
+      "whole-audio": "audio",
+      "draft-save-status": "span",
+      "realign-whole": "button",
+      "save-draft": "button",
+      "match-status": "strong",
+      "match-detail": "p",
+      "match-draft": "button",
+      "match-action-reason": "p",
+      "timeline-summary": "section",
+      "match-review": "details",
+      "match-review-label": "span",
+      "match-count": "span",
+      "match-review-hint": "p",
+      "match-rows": "div",
+      "match-save-status": "p",
+      "save-matches": "button",
+      "save-matches-reason": "p",
+      "mix-preview-heading": "h2",
+      "mix-preview": "video",
+      "mix-preview-empty": "div",
+      "mix-preview-caption": "p",
+      "cleaning-label": "strong",
+      "transition-label": "strong",
+      "render-draft": "button",
+      "render-action-reason": "p",
+      "render-all": "button",
+      "mix-empty": "div",
+      "tasks-title": "h2",
+      "task-summary": "span",
+      "mix-page-info": "span",
+      "mix-prev": "button",
+      "mix-next": "button",
+      "open-mix-logs": "button",
+      "mix-jobs": "div",
+      "page-settings": "section",
+      "settings-title": "h1",
+      "settings-form": "form",
+      "settings-recovery": "p",
+      "credential-recovery": "section",
+      "credential-recovery-title": "h2",
+      "reset-credentials": "button",
+      "deepseek-key-status": "span",
+      "set-deepseek_api_key": "input",
+      "set-deepseek_model": "input",
+      "fish-key-status": "span",
+      "set-fish_api_key": "input",
+      "set-voice_id": "input",
+      "glm-key-status": "span",
+      "set-glm_api_key": "input",
+      "set-vision_endpoint": "input",
+      "set-vision_model": "input",
+      "set-output_dir": "input",
+      "set-download_dir": "input",
+      "set-asr_model_path": "input",
+      "set-asr_device": "select",
+      "environment-status": "div",
+      "set-transition": "select",
+      "set-transition_seconds": "input",
+      "set-target_seconds": "input",
+      "set-output_count": "input",
+      "set-clean_mode": "select",
+      "set-clean_top_pct": "input",
+      "set-clean_height_pct": "input",
+      "set-subtitle_font_size": "input",
+      "set-subtitle_margin_pct": "input",
+      "set-caption_plate": "input",
+      "set-encoder": "select",
+      "set-preset": "select",
+      "set-width": "input",
+      "set-height": "input",
+      "set-fps": "select",
+      "set-render_concurrency": "select",
+      "storage-title": "h2",
+      "storage-summary": "p",
+      "storage-usage": "div",
+      "storage-include-caches": "input",
+      "refresh-storage": "button",
+      "clean-storage": "button",
+      "settings-status": "span",
+      "save-settings": "button",
+      "toast-region": "div",
+      "confirm-dialog": "dialog",
+      "confirm-title": "h2",
+      "confirm-description": "p",
+      "confirm-cancel": "button",
+      "confirm-accept": "button",
+      "job-detail-dialog": "dialog",
+      "job-detail-title": "h2",
+      "close-job-detail": "button",
+      "job-detail-content": "pre",
+      "asset-dialog": "dialog",
+      "asset-dialog-title": "h2",
+      "asset-dialog-meta": "p",
+      "close-asset-dialog": "button",
+      "asset-preview": "video",
+      "transcript-text": "textarea",
+      "transcript-error": "p",
+      "save-transcript": "button",
+      "transcript-status": "p"
+    },
+    "controls": {
+      "refresh-state": {
+        "tag": "button",
+        "form": null,
+        "attrs": {
+          "id": "refresh-state"
+        }
+      },
+      "library-tab-local": {
+        "tag": "button",
+        "form": null,
+        "attrs": {
+          "id": "library-tab-local",
+          "type": "button",
+          "role": "tab",
+          "aria-selected": "true",
+          "aria-controls": "library-panel-local",
+          "data-library": "local"
+        }
+      },
+      "library-tab-douyin": {
+        "tag": "button",
+        "form": null,
+        "attrs": {
+          "id": "library-tab-douyin",
+          "type": "button",
+          "role": "tab",
+          "aria-selected": "false",
+          "aria-controls": "library-panel-douyin",
+          "tabindex": "-1",
+          "data-library": "douyin"
+        }
+      },
+      "library-folder": {
+        "tag": "input",
+        "form": "folder-form",
+        "attrs": {
+          "id": "library-folder",
+          "type": "text",
+          "placeholder": "选择文件夹，或粘贴本地完整路径",
+          "autocomplete": "off"
+        }
+      },
+      "choose-folder": {
+        "tag": "button",
+        "form": "folder-form",
+        "attrs": {
+          "id": "choose-folder",
+          "type": "button"
+        }
+      },
+      "scan-folder": {
+        "tag": "button",
+        "form": "folder-form",
+        "attrs": {
+          "id": "scan-folder",
+          "type": "submit"
+        }
+      },
+      "download-link": {
+        "tag": "textarea",
+        "form": "download-form",
+        "attrs": {
+          "id": "download-link",
+          "rows": "4",
+          "autocomplete": "off",
+          "placeholder": "粘贴链接或完整分享文案，一行一条\n回车只换行，点击下面的按钮再开始下载"
+        }
+      },
+      "clear-download": {
+        "tag": "button",
+        "form": "download-form",
+        "attrs": {
+          "id": "clear-download",
+          "type": "button"
+        }
+      },
+      "queue-download": {
+        "tag": "button",
+        "form": "download-form",
+        "attrs": {
+          "id": "queue-download",
+          "type": "submit"
+        }
+      },
+      "select-all": {
+        "tag": "input",
+        "form": null,
+        "attrs": {
+          "id": "select-all",
+          "type": "checkbox"
+        }
+      },
+      "delete-selected-assets": {
+        "tag": "button",
+        "form": null,
+        "attrs": {
+          "id": "delete-selected-assets",
+          "type": "button",
+          "disabled": null
+        }
+      },
+      "empty-choose-folder": {
+        "tag": "button",
+        "form": null,
+        "attrs": {
+          "id": "empty-choose-folder"
+        }
+      },
+      "download-prev": {
+        "tag": "button",
+        "form": null,
+        "attrs": {
+          "id": "download-prev",
+          "type": "button",
+          "aria-label": "导入下载任务上一页",
+          "disabled": null
+        }
+      },
+      "download-next": {
+        "tag": "button",
+        "form": null,
+        "attrs": {
+          "id": "download-next",
+          "type": "button",
+          "aria-label": "导入下载任务下一页",
+          "disabled": null
+        }
+      },
+      "open-download-logs": {
+        "tag": "button",
+        "form": null,
+        "attrs": {
+          "id": "open-download-logs",
+          "type": "button"
+        }
+      },
+      "go-mix": {
+        "tag": "button",
+        "form": null,
+        "attrs": {
+          "id": "go-mix",
+          "disabled": null
+        }
+      },
+      "run-preflight": {
+        "tag": "button",
+        "form": null,
+        "attrs": {
+          "id": "run-preflight",
+          "type": "button"
+        }
+      },
+      "product-url": {
+        "tag": "input",
+        "form": "product-form",
+        "attrs": {
+          "id": "product-url",
+          "type": "text",
+          "required": null,
+          "autocomplete": "off",
+          "placeholder": "粘贴需要带货的京东商品链接或分享文字"
+        }
+      },
+      "clear-product": {
+        "tag": "button",
+        "form": "product-form",
+        "attrs": {
+          "id": "clear-product",
+          "type": "button"
+        }
+      },
+      "paste-product": {
+        "tag": "button",
+        "form": "product-form",
+        "attrs": {
+          "id": "paste-product",
+          "type": "button"
+        }
+      },
+      "read-product": {
+        "tag": "button",
+        "form": "product-form",
+        "attrs": {
+          "id": "read-product",
+          "type": "submit"
+        }
+      },
+      "target-seconds": {
+        "tag": "input",
+        "form": "prepare-form",
+        "attrs": {
+          "id": "target-seconds",
+          "type": "number",
+          "min": "5",
+          "max": "60",
+          "step": "1",
+          "value": "25",
+          "required": null
+        }
+      },
+      "output-count": {
+        "tag": "input",
+        "form": "prepare-form",
+        "attrs": {
+          "id": "output-count",
+          "type": "number",
+          "min": "1",
+          "max": "5",
+          "step": "1",
+          "value": "1",
+          "required": null
+        }
+      },
+      "prepare-button": {
+        "tag": "button",
+        "form": "prepare-form",
+        "attrs": {
+          "type": "submit",
+          "id": "prepare-button"
+        }
+      },
+      "disable-bgm": {
+        "tag": "button",
+        "form": null,
+        "attrs": {
+          "id": "disable-bgm",
+          "type": "button"
+        }
+      },
+      "set-bgm_path": {
+        "tag": "input",
+        "form": null,
+        "attrs": {
+          "id": "set-bgm_path",
+          "type": "text",
+          "readonly": null,
+          "placeholder": "尚未选择音乐"
+        }
+      },
+      "set-bgm_gain": {
+        "tag": "input",
+        "form": null,
+        "attrs": {
+          "id": "set-bgm_gain",
+          "type": "number",
+          "min": "0",
+          "max": "1",
+          "step": "0.05"
+        }
+      },
+      "save-bgm-gain": {
+        "tag": "button",
+        "form": null,
+        "attrs": {
+          "id": "save-bgm-gain",
+          "type": "button",
+          "disabled": null
+        }
+      },
+      "music-folder": {
+        "tag": "input",
+        "form": null,
+        "attrs": {
+          "id": "music-folder",
+          "type": "text",
+          "placeholder": "选择或填写音乐所在文件夹"
+        }
+      },
+      "choose-bgm": {
+        "tag": "button",
+        "form": null,
+        "attrs": {
+          "id": "choose-bgm",
+          "type": "button"
+        }
+      },
+      "scan-music": {
+        "tag": "button",
+        "form": null,
+        "attrs": {
+          "id": "scan-music",
+          "type": "button"
+        }
+      },
+      "import-music": {
+        "tag": "button",
+        "form": null,
+        "attrs": {
+          "id": "import-music",
+          "type": "button",
+          "disabled": null
+        }
+      },
+      "refresh-music": {
+        "tag": "button",
+        "form": null,
+        "attrs": {
+          "id": "refresh-music",
+          "type": "button"
+        }
+      },
+      "draft-select": {
+        "tag": "select",
+        "form": null,
+        "attrs": {
+          "id": "draft-select"
+        }
+      },
+      "realign-whole": {
+        "tag": "button",
+        "form": null,
+        "attrs": {
+          "id": "realign-whole",
+          "type": "button",
+          "hidden": null
+        }
+      },
+      "save-draft": {
+        "tag": "button",
+        "form": null,
+        "attrs": {
+          "id": "save-draft",
+          "disabled": null
+        }
+      },
+      "match-draft": {
+        "tag": "button",
+        "form": null,
+        "attrs": {
+          "id": "match-draft",
+          "type": "button",
+          "aria-describedby": "match-action-reason"
+        }
+      },
+      "save-matches": {
+        "tag": "button",
+        "form": null,
+        "attrs": {
+          "id": "save-matches",
+          "type": "button",
+          "aria-describedby": "save-matches-reason",
+          "disabled": null
+        }
+      },
+      "render-draft": {
+        "tag": "button",
+        "form": null,
+        "attrs": {
+          "id": "render-draft",
+          "aria-describedby": "render-action-reason"
+        }
+      },
+      "render-all": {
+        "tag": "button",
+        "form": null,
+        "attrs": {
+          "id": "render-all",
+          "hidden": null
+        }
+      },
+      "mix-prev": {
+        "tag": "button",
+        "form": null,
+        "attrs": {
+          "id": "mix-prev",
+          "type": "button",
+          "aria-label": "生成任务上一页",
+          "disabled": null
+        }
+      },
+      "mix-next": {
+        "tag": "button",
+        "form": null,
+        "attrs": {
+          "id": "mix-next",
+          "type": "button",
+          "aria-label": "生成任务下一页",
+          "disabled": null
+        }
+      },
+      "open-mix-logs": {
+        "tag": "button",
+        "form": null,
+        "attrs": {
+          "id": "open-mix-logs",
+          "type": "button"
+        }
+      },
+      "reset-credentials": {
+        "tag": "button",
+        "form": "settings-form",
+        "attrs": {
+          "id": "reset-credentials",
+          "type": "button"
+        }
+      },
+      "set-deepseek_api_key": {
+        "tag": "input",
+        "form": "settings-form",
+        "attrs": {
+          "id": "set-deepseek_api_key",
+          "type": "password",
+          "autocomplete": "new-password",
+          "placeholder": "输入密钥，留空则不变",
+          "spellcheck": "false"
+        }
+      },
+      "set-deepseek_model": {
+        "tag": "input",
+        "form": "settings-form",
+        "attrs": {
+          "id": "set-deepseek_model",
+          "type": "text",
+          "placeholder": "deepseek-flash",
+          "required": null
+        }
+      },
+      "set-fish_api_key": {
+        "tag": "input",
+        "form": "settings-form",
+        "attrs": {
+          "id": "set-fish_api_key",
+          "type": "password",
+          "autocomplete": "new-password",
+          "placeholder": "输入密钥，留空则不变",
+          "spellcheck": "false"
+        }
+      },
+      "set-voice_id": {
+        "tag": "input",
+        "form": "settings-form",
+        "attrs": {
+          "id": "set-voice_id",
+          "type": "text",
+          "placeholder": "be40aff9ee7b4d0cba3bb35e924d85b2",
+          "required": null
+        }
+      },
+      "set-glm_api_key": {
+        "tag": "input",
+        "form": "settings-form",
+        "attrs": {
+          "id": "set-glm_api_key",
+          "type": "password",
+          "autocomplete": "new-password",
+          "placeholder": "输入密钥，留空则不变",
+          "spellcheck": "false"
+        }
+      },
+      "set-vision_endpoint": {
+        "tag": "input",
+        "form": "settings-form",
+        "attrs": {
+          "id": "set-vision_endpoint",
+          "type": "url",
+          "required": null,
+          "placeholder": "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+        }
+      },
+      "set-vision_model": {
+        "tag": "input",
+        "form": "settings-form",
+        "attrs": {
+          "id": "set-vision_model",
+          "type": "text",
+          "required": null,
+          "placeholder": "glm-5.3-flash"
+        }
+      },
+      "set-output_dir": {
+        "tag": "input",
+        "form": "settings-form",
+        "attrs": {
+          "id": "set-output_dir",
+          "type": "text",
+          "required": null
+        }
+      },
+      "set-download_dir": {
+        "tag": "input",
+        "form": "settings-form",
+        "attrs": {
+          "id": "set-download_dir",
+          "type": "text",
+          "required": null
+        }
+      },
+      "set-asr_model_path": {
+        "tag": "input",
+        "form": "settings-form",
+        "attrs": {
+          "id": "set-asr_model_path",
+          "type": "text",
+          "placeholder": "可选；V2 脚本生成不依赖转写"
+        }
+      },
+      "set-asr_device": {
+        "tag": "select",
+        "form": "settings-form",
+        "attrs": {
+          "id": "set-asr_device"
+        }
+      },
+      "set-transition": {
+        "tag": "select",
+        "form": "settings-form",
+        "attrs": {
+          "id": "set-transition"
+        }
+      },
+      "set-transition_seconds": {
+        "tag": "input",
+        "form": "settings-form",
+        "attrs": {
+          "id": "set-transition_seconds",
+          "type": "number",
+          "min": "0",
+          "max": "0.8",
+          "step": "0.05"
+        }
+      },
+      "set-target_seconds": {
+        "tag": "input",
+        "form": "settings-form",
+        "attrs": {
+          "id": "set-target_seconds",
+          "type": "number",
+          "min": "5",
+          "max": "60",
+          "step": "1"
+        }
+      },
+      "set-output_count": {
+        "tag": "input",
+        "form": "settings-form",
+        "attrs": {
+          "id": "set-output_count",
+          "type": "number",
+          "min": "1",
+          "max": "5",
+          "step": "1"
+        }
+      },
+      "set-clean_mode": {
+        "tag": "select",
+        "form": "settings-form",
+        "attrs": {
+          "id": "set-clean_mode"
+        }
+      },
+      "set-clean_top_pct": {
+        "tag": "input",
+        "form": "settings-form",
+        "attrs": {
+          "id": "set-clean_top_pct",
+          "type": "number",
+          "min": "0",
+          "max": "95",
+          "step": "1"
+        }
+      },
+      "set-clean_height_pct": {
+        "tag": "input",
+        "form": "settings-form",
+        "attrs": {
+          "id": "set-clean_height_pct",
+          "type": "number",
+          "min": "3",
+          "max": "45",
+          "step": "1"
+        }
+      },
+      "set-subtitle_font_size": {
+        "tag": "input",
+        "form": "settings-form",
+        "attrs": {
+          "id": "set-subtitle_font_size",
+          "type": "number",
+          "min": "16",
+          "max": "96",
+          "step": "1"
+        }
+      },
+      "set-subtitle_margin_pct": {
+        "tag": "input",
+        "form": "settings-form",
+        "attrs": {
+          "id": "set-subtitle_margin_pct",
+          "type": "number",
+          "min": "2",
+          "max": "40",
+          "step": "1"
+        }
+      },
+      "set-caption_plate": {
+        "tag": "input",
+        "form": "settings-form",
+        "attrs": {
+          "id": "set-caption_plate",
+          "type": "checkbox"
+        }
+      },
+      "set-encoder": {
+        "tag": "select",
+        "form": "settings-form",
+        "attrs": {
+          "id": "set-encoder"
+        }
+      },
+      "set-preset": {
+        "tag": "select",
+        "form": "settings-form",
+        "attrs": {
+          "id": "set-preset"
+        }
+      },
+      "set-width": {
+        "tag": "input",
+        "form": "settings-form",
+        "attrs": {
+          "id": "set-width",
+          "type": "number",
+          "min": "240",
+          "max": "1920",
+          "step": "2"
+        }
+      },
+      "set-height": {
+        "tag": "input",
+        "form": "settings-form",
+        "attrs": {
+          "id": "set-height",
+          "type": "number",
+          "min": "240",
+          "max": "1920",
+          "step": "2"
+        }
+      },
+      "set-fps": {
+        "tag": "select",
+        "form": "settings-form",
+        "attrs": {
+          "id": "set-fps"
+        }
+      },
+      "set-render_concurrency": {
+        "tag": "select",
+        "form": "settings-form",
+        "attrs": {
+          "id": "set-render_concurrency"
+        }
+      },
+      "storage-include-caches": {
+        "tag": "input",
+        "form": "settings-form",
+        "attrs": {
+          "id": "storage-include-caches",
+          "type": "checkbox"
+        }
+      },
+      "refresh-storage": {
+        "tag": "button",
+        "form": "settings-form",
+        "attrs": {
+          "id": "refresh-storage",
+          "type": "button"
+        }
+      },
+      "clean-storage": {
+        "tag": "button",
+        "form": "settings-form",
+        "attrs": {
+          "id": "clean-storage",
+          "type": "button"
+        }
+      },
+      "save-settings": {
+        "tag": "button",
+        "form": "settings-form",
+        "attrs": {
+          "id": "save-settings",
+          "type": "submit"
+        }
+      },
+      "confirm-cancel": {
+        "tag": "button",
+        "form": null,
+        "attrs": {
+          "id": "confirm-cancel"
+        }
+      },
+      "confirm-accept": {
+        "tag": "button",
+        "form": null,
+        "attrs": {
+          "id": "confirm-accept"
+        }
+      },
+      "close-job-detail": {
+        "tag": "button",
+        "form": null,
+        "attrs": {
+          "id": "close-job-detail",
+          "type": "button"
+        }
+      },
+      "close-asset-dialog": {
+        "tag": "button",
+        "form": null,
+        "attrs": {
+          "id": "close-asset-dialog",
+          "aria-label": "关闭素材预览"
+        }
+      },
+      "transcript-text": {
+        "tag": "textarea",
+        "form": null,
+        "attrs": {
+          "id": "transcript-text",
+          "rows": "12",
+          "spellcheck": "false",
+          "placeholder": "0 | 3.5 | 鞋底纹路展示\n3.5 | 7 | 加厚鞋底和鞋面细节"
+        }
+      },
+      "save-transcript": {
+        "tag": "button",
+        "form": null,
+        "attrs": {
+          "id": "save-transcript"
+        }
+      }
+    },
+    "bindings": [
+      {
+        "tag": "button",
+        "id": null,
+        "classes": [
+          "choose-setting-folder"
+        ],
+        "data": {
+          "data-for": "set-asr_model_path"
+        }
+      },
+      {
+        "tag": "button",
+        "id": null,
+        "classes": [
+          "choose-setting-folder"
+        ],
+        "data": {
+          "data-for": "set-download_dir"
+        }
+      },
+      {
+        "tag": "button",
+        "id": null,
+        "classes": [
+          "choose-setting-folder"
+        ],
+        "data": {
+          "data-for": "set-output_dir"
+        }
+      },
+      {
+        "tag": "button",
+        "id": null,
+        "classes": [
+          "nav-button"
+        ],
+        "data": {
+          "data-page": "library"
+        }
+      },
+      {
+        "tag": "button",
+        "id": null,
+        "classes": [
+          "nav-button"
+        ],
+        "data": {
+          "data-page": "mix"
+        }
+      },
+      {
+        "tag": "button",
+        "id": null,
+        "classes": [
+          "nav-button"
+        ],
+        "data": {
+          "data-page": "settings"
+        }
+      },
+      {
+        "tag": "section",
+        "id": "page-library",
+        "classes": [
+          "page"
+        ],
+        "data": {}
+      },
+      {
+        "tag": "section",
+        "id": "page-mix",
+        "classes": [
+          "page"
+        ],
+        "data": {}
+      },
+      {
+        "tag": "section",
+        "id": "page-settings",
+        "classes": [
+          "page"
+        ],
+        "data": {}
+      },
+      {
+        "tag": "ol",
+        "id": null,
+        "classes": [
+          "workflow"
+        ],
+        "data": {}
+      },
+      {
+        "tag": "button",
+        "id": "library-tab-douyin",
+        "classes": [],
+        "data": {
+          "data-library": "douyin"
+        }
+      },
+      {
+        "tag": "button",
+        "id": "library-tab-local",
+        "classes": [],
+        "data": {
+          "data-library": "local"
+        }
+      },
+      {
+        "tag": "button",
+        "id": null,
+        "classes": [],
+        "data": {
+          "data-page": "library"
+        }
+      }
+    ],
+    "workflow": [
+      "免费预检",
+      "商品与文案",
+      "整条配音与成片"
+    ],
+    "form_ids": [
+      "download-form",
+      "folder-form",
+      "prepare-form",
+      "product-form",
+      "settings-form"
+    ],
+    "native_defaults": {
+      "i-grid": {},
+      "i-cut": {},
+      "i-settings": {},
+      "i-folder": {},
+      "i-refresh": {},
+      "i-link": {},
+      "i-play": {},
+      "i-close": {},
+      "i-arrow": {},
+      "i-check": {},
+      "i-film": {},
+      "i-text": {},
+      "i-alert": {},
+      "i-music": {},
+      "asset-count": {},
+      "active-count": {
+        "hidden": null
+      },
+      "connection-status": {},
+      "connection-text": {},
+      "main": {},
+      "page-name": {},
+      "refresh-state": {},
+      "connection-error": {
+        "hidden": null,
+        "role": "alert"
+      },
+      "page-library": {
+        "aria-labelledby": "library-title"
+      },
+      "library-title": {},
+      "library-tab-local": {
+        "role": "tab"
+      },
+      "library-tab-douyin": {
+        "role": "tab"
+      },
+      "library-panel-local": {
+        "role": "tabpanel",
+        "aria-labelledby": "library-tab-local"
+      },
+      "folder-form": {},
+      "library-folder": {},
+      "choose-folder": {},
+      "scan-folder": {},
+      "library-panel-douyin": {
+        "hidden": null,
+        "role": "tabpanel",
+        "aria-labelledby": "library-tab-douyin"
+      },
+      "download-form": {},
+      "download-link": {},
+      "clear-download": {},
+      "download-destination": {},
+      "queue-download": {},
+      "select-all": {},
+      "library-summary": {},
+      "delete-selected-assets": {},
+      "asset-grid": {},
+      "library-empty": {},
+      "library-empty-title": {},
+      "library-empty-description": {},
+      "empty-choose-folder": {},
+      "library-queue": {},
+      "download-count": {},
+      "download-page-info": {},
+      "download-prev": {},
+      "download-next": {},
+      "open-download-logs": {},
+      "download-jobs": {},
+      "selection-count": {},
+      "selection-sources": {},
+      "go-mix": {},
+      "page-mix": {
+        "hidden": null,
+        "aria-labelledby": "mix-title"
+      },
+      "mix-title": {},
+      "run-preflight": {},
+      "preflight-status": {
+        "role": "status"
+      },
+      "product-info-heading": {},
+      "product-form": {},
+      "product-url": {},
+      "clear-product": {},
+      "paste-product": {},
+      "read-product": {},
+      "product-read-status": {
+        "hidden": null,
+        "role": "status"
+      },
+      "product-card": {
+        "hidden": null
+      },
+      "product-title": {},
+      "prepare-form": {},
+      "mix-selection-count": {},
+      "mix-selection-names": {},
+      "target-seconds": {},
+      "output-count": {},
+      "duration-hint": {},
+      "prepare-button": {},
+      "music-panel": {},
+      "music-current-name": {},
+      "disable-bgm": {},
+      "music-status": {
+        "role": "status"
+      },
+      "music-error": {
+        "hidden": null,
+        "role": "alert"
+      },
+      "set-bgm_path": {},
+      "set-bgm_gain": {},
+      "save-bgm-gain": {},
+      "music-folder": {},
+      "choose-bgm": {},
+      "scan-music": {},
+      "music-candidates": {},
+      "import-music": {},
+      "refresh-music": {},
+      "music-tracks": {},
+      "draft-workspace": {
+        "hidden": null
+      },
+      "draft-meta": {},
+      "draft-select": {},
+      "draft-editor-help": {},
+      "whole-migration-notice": {
+        "hidden": null,
+        "role": "status"
+      },
+      "draft-history-warning": {
+        "hidden": null,
+        "role": "status"
+      },
+      "draft-timing-status": {
+        "hidden": null,
+        "role": "status",
+        "aria-live": "polite"
+      },
+      "draft-segments": {},
+      "whole-duration": {
+        "role": "status"
+      },
+      "whole-audio": {
+        "hidden": null
+      },
+      "draft-save-status": {},
+      "realign-whole": {
+        "hidden": null
+      },
+      "save-draft": {},
+      "match-status": {},
+      "match-detail": {},
+      "match-draft": {
+        "aria-describedby": "match-action-reason"
+      },
+      "match-action-reason": {
+        "hidden": null,
+        "role": "status"
+      },
+      "timeline-summary": {
+        "aria-live": "polite"
+      },
+      "match-review": {},
+      "match-review-label": {},
+      "match-count": {},
+      "match-review-hint": {},
+      "match-rows": {},
+      "match-save-status": {
+        "role": "status"
+      },
+      "save-matches": {
+        "aria-describedby": "save-matches-reason"
+      },
+      "save-matches-reason": {},
+      "mix-preview-heading": {},
+      "mix-preview": {
+        "hidden": null
+      },
+      "mix-preview-empty": {},
+      "mix-preview-caption": {},
+      "cleaning-label": {},
+      "transition-label": {},
+      "render-draft": {
+        "aria-describedby": "render-action-reason"
+      },
+      "render-action-reason": {
+        "hidden": null,
+        "role": "status"
+      },
+      "render-all": {
+        "hidden": null
+      },
+      "mix-empty": {},
+      "tasks-title": {},
+      "task-summary": {},
+      "mix-page-info": {},
+      "mix-prev": {},
+      "mix-next": {},
+      "open-mix-logs": {},
+      "mix-jobs": {},
+      "page-settings": {
+        "hidden": null,
+        "aria-labelledby": "settings-title"
+      },
+      "settings-title": {},
+      "settings-form": {},
+      "settings-recovery": {
+        "hidden": null,
+        "role": "status"
+      },
+      "credential-recovery": {
+        "hidden": null,
+        "aria-labelledby": "credential-recovery-title"
+      },
+      "credential-recovery-title": {},
+      "reset-credentials": {},
+      "deepseek-key-status": {},
+      "set-deepseek_api_key": {},
+      "set-deepseek_model": {},
+      "fish-key-status": {},
+      "set-fish_api_key": {},
+      "set-voice_id": {},
+      "glm-key-status": {},
+      "set-glm_api_key": {},
+      "set-vision_endpoint": {},
+      "set-vision_model": {},
+      "set-output_dir": {},
+      "set-download_dir": {},
+      "set-asr_model_path": {},
+      "set-asr_device": {},
+      "environment-status": {},
+      "set-transition": {},
+      "set-transition_seconds": {},
+      "set-target_seconds": {},
+      "set-output_count": {},
+      "set-clean_mode": {},
+      "set-clean_top_pct": {},
+      "set-clean_height_pct": {},
+      "set-subtitle_font_size": {},
+      "set-subtitle_margin_pct": {},
+      "set-caption_plate": {},
+      "set-encoder": {},
+      "set-preset": {},
+      "set-width": {},
+      "set-height": {},
+      "set-fps": {},
+      "set-render_concurrency": {},
+      "storage-title": {},
+      "storage-summary": {
+        "role": "status"
+      },
+      "storage-usage": {},
+      "storage-include-caches": {},
+      "refresh-storage": {},
+      "clean-storage": {},
+      "settings-status": {},
+      "save-settings": {},
+      "toast-region": {
+        "aria-live": "polite"
+      },
+      "confirm-dialog": {
+        "aria-labelledby": "confirm-title",
+        "aria-describedby": "confirm-description"
+      },
+      "confirm-title": {},
+      "confirm-description": {},
+      "confirm-cancel": {},
+      "confirm-accept": {},
+      "job-detail-dialog": {
+        "aria-labelledby": "job-detail-title"
+      },
+      "job-detail-title": {},
+      "close-job-detail": {},
+      "job-detail-content": {},
+      "asset-dialog": {
+        "aria-labelledby": "asset-dialog-title"
+      },
+      "asset-dialog-title": {},
+      "asset-dialog-meta": {},
+      "close-asset-dialog": {},
+      "asset-preview": {},
+      "transcript-text": {},
+      "transcript-error": {
+        "hidden": null,
+        "role": "alert"
+      },
+      "save-transcript": {},
+      "transcript-status": {
+        "role": "status"
+      }
+    },
+    "labels": [
+      "download-link",
+      "draft-select",
+      "library-folder",
+      "music-folder",
+      "output-count",
+      "product-url",
+      "set-asr_device",
+      "set-asr_model_path",
+      "set-bgm_gain",
+      "set-bgm_path",
+      "set-clean_height_pct",
+      "set-clean_mode",
+      "set-clean_top_pct",
+      "set-deepseek_api_key",
+      "set-deepseek_model",
+      "set-download_dir",
+      "set-encoder",
+      "set-fish_api_key",
+      "set-fps",
+      "set-glm_api_key",
+      "set-height",
+      "set-output_count",
+      "set-output_dir",
+      "set-preset",
+      "set-render_concurrency",
+      "set-subtitle_font_size",
+      "set-subtitle_margin_pct",
+      "set-target_seconds",
+      "set-transition",
+      "set-transition_seconds",
+      "set-vision_endpoint",
+      "set-vision_model",
+      "set-voice_id",
+      "set-width",
+      "target-seconds",
+      "transcript-text"
+    ],
+    "script_assets": [
+      {
+        "src": "/app.js",
+        "defer": null
+      }
+    ],
+    "stylesheet_assets": [
+      {
+        "rel": "stylesheet",
+        "href": "/styles.css"
+      }
+    ]
+  },
+  "brand_assets": {
+    "brand-logo.jpg": "9ff20d396329776b6cbc260a04a051c941111615fc8856ef3dcc350658b4c536",
+    "brand-icon.ico": "f3a19aaecfe22e8081feb68a7b1f1a94da7c373119271ed48315809481e9487a"
+  },
+  "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+  "native": {
+    "app.py": {
+      "functions": {},
+      "cli": []
+    },
+    "mixstudio/desktop.py": {
+      "functions": {
+        "_read_clipboard_windows": "arguments(posonlyargs=[], args=[], kwonlyargs=[arg(arg='user32'), arg(arg='kernel32')], kw_defaults=[Constant(value=None), Constant(value=None)], defaults=[])",
+        "main": "arguments(posonlyargs=[], args=[arg(arg='argv')], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None)])",
+        "__init__": "arguments(posonlyargs=[], args=[arg(arg='self')], kwonlyargs=[], kw_defaults=[], defaults=[])",
+        "choose_folder": "arguments(posonlyargs=[], args=[arg(arg='self')], kwonlyargs=[], kw_defaults=[], defaults=[])",
+        "choose_music_folder": "arguments(posonlyargs=[], args=[arg(arg='self')], kwonlyargs=[], kw_defaults=[], defaults=[])",
+        "read_clipboard": "arguments(posonlyargs=[], args=[arg(arg='self')], kwonlyargs=[], kw_defaults=[], defaults=[])",
+        "choose_bgm": "arguments(posonlyargs=[], args=[arg(arg='self')], kwonlyargs=[], kw_defaults=[], defaults=[])"
+      },
+      "cli": [
+        "Call(func=Attribute(value=Name(id='parser', ctx=Load()), attr='add_argument', ctx=Load()), args=[Constant(value='--headless')], keywords=[keyword(arg='action', value=Constant(value='store_true')), keyword(arg='help', value=Constant(value='local HTTP verification mode'))])",
+        "Call(func=Attribute(value=Name(id='parser', ctx=Load()), attr='add_argument', ctx=Load()), args=[Constant(value='--port')], keywords=[keyword(arg='type', value=Name(id='int', ctx=Load())), keyword(arg='default', value=Constant(value=0))])",
+        "Call(func=Attribute(value=Name(id='parser', ctx=Load()), attr='add_argument', ctx=Load()), args=[Constant(value='--data-dir')], keywords=[keyword(arg='type', value=Name(id='Path', ctx=Load()))])",
+        "Call(func=Attribute(value=Name(id='parser', ctx=Load()), attr='add_argument', ctx=Load()), args=[Constant(value='--ready-file')], keywords=[keyword(arg='type', value=Name(id='Path', ctx=Load()))])"
+      ]
+    }
+  }
+}

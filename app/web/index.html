@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="local-token" content="__LOCAL_TOKEN__">
+  <meta name="color-scheme" content="light">
+  <title>量禾混剪</title>
+  <link rel="icon" href="/brand-icon.ico">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <svg class="icon-defs" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+    <symbol id="i-cut" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="m8.5 7.5 12 13M8.5 16.5l12-13M13 12l-3-3"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8m7.2 7.2 2.8 2.8M5.6 18.4l2.8-2.8m7.2-7.2 2.8-2.8"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/><path d="M3 9h18"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.2 8a8 8 0 0 1 13-3L20 8M4 16l1.8 3a8 8 0 0 0 13-3"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="m10 13 4-4m-6 7-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0m2 10a4 4 0 0 0 6 0l4-4a4 4 0 0 0-6-6l-1 1" transform="translate(1 0) scale(.92)"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 4 12 8-12 8Z"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h16m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-film" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 3v18M17 3v18M3 8h4M3 16h4m10-8h4m-4 8h4M7 12h10"/></symbol>
+    <symbol id="i-text" viewBox="0 0 24 24"><path d="M4 5h16M4 10h16M4 15h11M4 20h8"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="m12 3 10 18H2Z"/><path d="M12 9v5m0 3v.1"/></symbol>
+    <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13M9 8l12-2"/><ellipse cx="6" cy="18" rx="3" ry="3"/><ellipse cx="18" cy="16" rx="3" ry="3"/></symbol>
+  </svg>
+  <a class="skip-link" href="#main">跳到主要内容</a>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="主导航">
+      <div class="brand"><div class="brand-mark"><img src="/brand-logo.jpg" alt="" width="66" height="66"></div><div><strong>量禾混剪</strong><span>视频创作工作台</span></div></div>
+      <nav class="nav-list">
+        <button class="nav-button active" data-page="library" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg><span>素材库</span><span class="nav-count" id="asset-count">0</span></button>
+        <button class="nav-button" data-page="mix"><svg class="icon" aria-hidden="true"><use href="#i-cut"/></svg><span>混剪工作台</span><span class="nav-count" id="active-count" hidden>0</span></button>
+        <button class="nav-button" data-page="settings"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span>设置</span></button>
+      </nav>
+      <div class="sidebar-bottom"><span class="connection" id="connection-status"><span class="status-dot"></span><span id="connection-text">正在连接</span></span><span class="version">V2 · 本地桌面工作台</span></div>
+    </aside>
+    <main id="main" tabindex="-1">
+      <header class="topbar">
+        <div class="breadcrumb"><span>工作空间</span><span aria-hidden="true">/</span><strong id="page-name">素材库</strong></div>
+        <button id="refresh-state" class="button button-quiet"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span>同步状态</span></button>
+      </header>
+      <div id="connection-error" class="banner banner-error" role="alert" hidden></div>
+      <section id="page-library" class="page" aria-labelledby="library-title">
+        <div class="page-heading"><div><h1 id="library-title">素材库</h1><div class="library-tabs" role="tablist" aria-label="素材来源"><button id="library-tab-local" class="library-tab active" type="button" role="tab" aria-selected="true" aria-controls="library-panel-local" data-library="local">本地素材库</button><button id="library-tab-douyin" class="library-tab" type="button" role="tab" aria-selected="false" aria-controls="library-panel-douyin" tabindex="-1" data-library="douyin">抖音素材库</button></div><p>两边勾选的素材，一起带入混剪工作台。</p></div><span class="subtle-chip">原素材保持不变</span></div>
+        <div id="library-panel-local" class="library-import" role="tabpanel" aria-labelledby="library-tab-local">
+          <form id="folder-form" class="folder-row">
+            <label class="field-grow" for="library-folder"><span class="field-label">本地素材文件夹</span><input id="library-folder" type="text" placeholder="选择文件夹，或粘贴本地完整路径" autocomplete="off"></label>
+            <button id="choose-folder" class="button" type="button"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg>选择文件夹</button>
+            <button id="scan-folder" class="button button-primary" type="submit"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg>读取素材</button>
+          </form>
+          <p class="field-hint">只读取视频，不移动、不修改原文件。切换文件夹会保留已经勾选的素材。</p>
+        </div>
+        <div id="library-panel-douyin" class="library-import" role="tabpanel" aria-labelledby="library-tab-douyin" hidden>
+          <form id="download-form" class="download-compose">
+            <label for="download-link" class="field-label">抖音视频链接</label>
+            <textarea id="download-link" rows="4" autocomplete="off" placeholder="粘贴链接或完整分享文案，一行一条&#10;回车只换行，点击下面的按钮再开始下载"></textarea>
+            <div class="download-actions"><button id="clear-download" type="button" class="button button-quiet">清空</button><span id="download-destination" class="field-hint"></span><button id="queue-download" type="submit" class="button button-primary"><svg class="icon" aria-hidden="true"><use href="#i-link"/></svg>解析并下载</button></div>
+          </form>
+        </div>
+        <div class="library-toolbar">
+          <label class="checkbox-label"><input id="select-all" type="checkbox">全选当前素材</label>
+          <span id="library-summary" class="muted">还没有导入素材</span><div class="library-actions"><span class="sort-label">按导入时间 · 最新在前</span><button id="delete-selected-assets" type="button" class="button button-small button-danger" disabled>一键删除</button></div>
+        </div>
+        <div id="asset-grid" class="asset-grid"></div>
+        <div id="library-empty" class="empty-state"><div class="empty-icon"><svg class="icon" aria-hidden="true"><use href="#i-film"/></svg></div><h2 id="library-empty-title">从一组同商品的视频开始</h2><p id="library-empty-description">选择本地素材文件夹。导入后，勾选这次混剪需要的视频。</p><button class="button button-primary" id="empty-choose-folder"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg>选择素材文件夹</button></div>
+        <details class="queue-panel" id="library-queue"><summary>导入与下载任务 <span id="download-count" class="muted">0</span></summary><div class="jobs-toolbar"><span id="download-page-info" class="field-hint">暂无任务</span><button id="download-prev" type="button" class="button button-small" aria-label="导入下载任务上一页" disabled>上一页</button><button id="download-next" type="button" class="button button-small" aria-label="导入下载任务下一页" disabled>下一页</button><button id="open-download-logs" type="button" class="button button-small">打开日志文件夹</button></div><div id="download-jobs" class="job-list"></div></details>
+        <div class="selection-bar"><div><strong id="selection-count">已选 0 个视频</strong><span id="selection-sources">本地 0 个｜抖音 0 个 · 同一内容只加入一次</span></div><button id="go-mix" class="button button-primary" disabled>下一步<svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button></div>
+      </section>
+      <section id="page-mix" class="page" aria-labelledby="mix-title" hidden>
+        <div class="page-heading"><div><h1 id="mix-title">混剪工作台</h1><p>先确认口播文案，再让合适的画面跟上。</p></div><button class="button button-quiet" data-page="library">返回选素材</button></div>
+        <ol class="workflow"><li class="current"><span>1</span>免费预检</li><li><span>2</span>商品与文案</li><li><span>3</span>整条配音与成片</li></ol>
+        <section class="product-panel" aria-label="免费预检"><div class="section-title"><h2>免费预检</h2><button id="run-preflight" class="button" type="button">重新检查</button></div><p id="preflight-status" class="field-hint" role="status">检查素材、HDR准备、模型配置和输出环境，不调用收费接口。</p></section>
+        <section class="product-panel" aria-label="京东商品信息"><h2 id="product-info-heading" class="panel-heading product-heading">商品信息/请填入京东商品链接</h2>
+          <form id="product-form" class="folder-row"><label class="field-grow" for="product-url"><span class="sr-only">京东商品链接</span><input id="product-url" type="text" required autocomplete="off" placeholder="粘贴需要带货的京东商品链接或分享文字"></label><button id="clear-product" class="button button-quiet" type="button">清空</button><button id="paste-product" class="button" type="button">粘贴</button><button id="read-product" class="button" type="submit">读取商品</button></form>
+          <p id="product-read-status" class="field-hint" role="status" hidden></p>
+          <div id="product-card" class="product-card" hidden><strong id="product-title"></strong></div>
+        </section>
+        <form id="prepare-form" class="prepare-panel"><h2 class="panel-heading">视频参数</h2>
+          <div class="source-summary"><svg class="icon" aria-hidden="true"><use href="#i-film"/></svg><div><strong id="mix-selection-count">未选择素材</strong><span id="mix-selection-names">请先回素材库勾选同商品的视频</span></div></div>
+          <div class="prepare-fields">
+            <label for="target-seconds"><span class="field-label">参考时长 / 秒</span><input id="target-seconds" type="number" min="5" max="60" step="1" value="25" required></label>
+            <label for="output-count"><span class="field-label">生成数量 / 条</span><input id="output-count" type="number" min="1" max="5" step="1" value="1" required></label>
+            <span id="duration-hint" class="duration-hint">参考时长，成片按实测配音与镜头校准，最长 60 秒</span>
+            <button class="button button-primary" type="submit" id="prepare-button"><svg class="icon" aria-hidden="true"><use href="#i-text"/></svg>生成文案</button>
+          </div>
+          <p class="field-hint">根据商品标题与预设脚本规则生成，标题未支持的参数不补写。仅在点击确认后调用 DeepSeek；配音和画面识别分别确认。</p>
+        </form>
+        <details id="music-panel" class="music-panel"><summary aria-label="背景音乐，点击管理"><span id="music-current-name">未选择</span></summary><div class="music-panel-content">
+          <div class="section-title"><h2>背景音乐</h2><button id="disable-bgm" class="button button-small" type="button">不加音乐</button></div>
+          <p id="music-status" class="field-hint" role="status"></p><p id="music-error" class="inline-error" role="alert" hidden></p>
+          <div class="music-settings"><label class="music-path" for="set-bgm_path"><span class="field-label">当前音乐文件</span><input id="set-bgm_path" type="text" readonly placeholder="尚未选择音乐"></label><label for="set-bgm_gain"><span class="field-label">BGM 音量系数</span><input id="set-bgm_gain" type="number" min="0" max="1" step="0.05"><span class="field-hint">0.15 表示原音量的 15%，更改后自动保存。</span></label><button id="save-bgm-gain" class="button button-small" type="button" disabled>保存音量</button></div>
+          <div class="music-import"><label class="field-label" for="music-folder">导入音乐文件夹</label><div class="folder-row"><input id="music-folder" class="field-grow" type="text" placeholder="选择或填写音乐所在文件夹"><button id="choose-bgm" class="button" type="button">选择文件夹</button><button id="scan-music" class="button" type="button">扫描歌曲</button></div><p class="field-hint">只扫描当前文件夹，不包含子文件夹。勾选后导入到软件音乐库，原始歌曲保持不变。</p><div id="music-candidates" class="music-candidates"></div><button id="import-music" class="button button-primary button-small" type="button" disabled>导入勾选歌曲</button></div>
+          <div class="section-title music-library-heading"><h3>音乐库</h3><button id="refresh-music" class="button button-small" type="button">刷新列表</button></div><div id="music-tracks" class="music-tracks"></div>
+        </div></details>
+        <div id="draft-workspace" class="draft-workspace" hidden>
+          <div class="editor-pane">
+            <div class="section-title"><div><h2>口播文案</h2><span id="draft-meta" class="muted"></span></div><label class="sr-only" for="draft-select">选择文案</label><select id="draft-select"></select></div>
+            <div id="draft-editor-help" class="editor-help">这里仅显示成片口播。保存修改后需要重新匹配画面，内部脚本与分镜不展示。</div>
+            <p id="whole-migration-notice" class="field-hint" role="status" hidden></p>
+            <p id="draft-history-warning" class="draft-timing needs-adjustment" role="status" hidden></p>
+            <p id="draft-timing-status" class="draft-timing" role="status" aria-live="polite" hidden></p>
+            <div id="draft-segments"></div><p id="whole-duration" class="field-hint" role="status"></p><audio id="whole-audio" controls preload="metadata" hidden aria-label="整条配音试听"></audio>
+            <div class="editor-footer"><span id="draft-save-status" class="muted">文案已保存</span><button id="realign-whole" type="button" class="button button-small" hidden>重新本地对齐（免费）</button><button id="save-draft" class="button" disabled>保存修改</button></div>
+                    <div class="match-controls"><div><strong id="match-status">等待匹配画面</strong><p id="match-detail" class="field-hint">确认文案后，识别并筛选素材中的可用镜头。</p></div><div class="primary-action"><button id="match-draft" type="button" class="button button-primary" aria-describedby="match-action-reason">自动匹配画面</button><p id="match-action-reason" class="action-reason" role="status" hidden></p></div></div><section id="timeline-summary" class="timeline-summary" aria-label="自动时间线" aria-live="polite"></section>
+            <details id="match-review" class="match-review"><summary><span id="match-review-label">预览与替换画面（可选）</span> <span id="match-count" class="muted"></span></summary><p id="match-review-hint" class="field-hint">每句话可以选择多个已分析的片段。先勾选，再预览；缺少画面时补充素材，不随机凑片。</p><div id="match-rows"></div><p id="match-save-status" class="field-hint" role="status"></p><button id="save-matches" type="button" class="button" aria-describedby="save-matches-reason" disabled>保存画面选择</button><p id="save-matches-reason" class="field-hint"></p></details>
+          </div>
+          <aside class="preview-pane"><h2 class="panel-heading">预览与输出</h2>
+            <div class="section-title"><h2 id="mix-preview-heading">片段预览</h2></div>
+            <div class="preview-canvas"><video id="mix-preview" controls playsinline preload="metadata" aria-label="视频预览" hidden></video><div id="mix-preview-empty"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg><p>展开“预览与替换画面”查看匹配片段</p></div></div>
+            <p id="mix-preview-caption" class="field-hint">最终配音、转场与字幕以导出成片为准。</p>
+            <div class="render-summary"><div><span>声音</span><strong>Fish Audio</strong></div><div><span>画面处理</span><strong id="cleaning-label">待同步</strong></div><div><span>镜头衔接</span><strong id="transition-label">轻柔淡化</strong></div></div>
+            <button id="render-draft" class="button button-primary button-full" aria-describedby="render-action-reason"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg>确认并生成本条视频</button>
+            <p id="render-action-reason" class="action-reason" role="status" hidden></p><button id="render-all" class="button button-full" hidden>生成全部文案对应视频</button>
+            <p class="field-hint">确认后先免费预检，再生成整条配音、自动匹配画面并导出。会确认 Fish、GLM 和 DeepSeek 的可能费用，成功缓存复用；不保留素材原始口播。</p>
+          </aside>
+        </div>
+        <div id="mix-empty" class="mix-empty"><svg class="icon" aria-hidden="true"><use href="#i-text"/></svg><div><h2>文案准备好后，在这里调整</h2><p>填写京东链接并读取商品，选好秒数和条数，再生成文案。</p></div></div>
+        <section class="tasks-section" aria-labelledby="tasks-title"><div class="section-title"><h2 id="tasks-title">生成任务</h2><span class="muted" id="task-summary">暂无任务</span></div><div class="jobs-toolbar"><span id="mix-page-info" class="field-hint">暂无任务</span><button id="mix-prev" type="button" class="button button-small" aria-label="生成任务上一页" disabled>上一页</button><button id="mix-next" type="button" class="button button-small" aria-label="生成任务下一页" disabled>下一页</button><button id="open-mix-logs" type="button" class="button button-small">打开日志文件夹</button></div><div id="mix-jobs" class="job-list"></div></section>
+      </section>
+      <section id="page-settings" class="page settings-page" aria-labelledby="settings-title" hidden>
+        <div class="page-heading"><div><h1 id="settings-title">设置</h1><p>配置服务与输出默认值，工作台只保留常用操作。</p></div><span class="subtle-chip">仅保存在这台电脑</span></div>
+        <form id="settings-form">
+          <p id="settings-recovery" class="credential-recovery" role="status" hidden></p>
+          <section id="credential-recovery" class="credential-recovery" aria-labelledby="credential-recovery-title" hidden><div><h2 id="credential-recovery-title">本机凭据需要重建</h2><p>已保存的加密凭据未能读取。可先备份旧文件，再建立空凭据并重新填写服务密钥；其他设置和页面未保存输入保持不变。</p></div><button id="reset-credentials" type="button" class="button">备份并重建凭据</button></section>
+          <section class="settings-section"><div class="settings-section-title"><h2>模型服务</h2><p>密钥保存后不会回显。留空可保留已保存的密钥。</p></div><div class="settings-fields">
+            <label for="set-deepseek_api_key"><span class="field-label">DeepSeek API Key <span id="deepseek-key-status" class="key-status">未配置</span></span><input id="set-deepseek_api_key" type="password" autocomplete="new-password" placeholder="输入密钥，留空则不变" spellcheck="false"></label>
+            <label for="set-deepseek_model"><span class="field-label">DeepSeek 模型</span><input id="set-deepseek_model" type="text" placeholder="deepseek-flash" required></label>
+            <label for="set-fish_api_key"><span class="field-label">Fish Audio API Key <span id="fish-key-status" class="key-status">未配置</span></span><input id="set-fish_api_key" type="password" autocomplete="new-password" placeholder="输入密钥，留空则不变" spellcheck="false"></label>
+            <label for="set-voice_id"><span class="field-label">Fish 音色 ID</span><input id="set-voice_id" type="text" placeholder="be40aff9ee7b4d0cba3bb35e924d85b2" required><span class="field-hint">可粘贴 Fish 网站上的其他音色 ID。</span></label>
+          </div></section>
+          <section class="settings-section"><div class="settings-section-title"><h2>画面识别</h2><p>分析黑屏、模糊、无关引导和商品画面，再按文案匹配。只筛选成片片段，不删除原素材。GLM-5.3-Flash：3 秒一窗、每窗最多 5 帧、每条视频最多 90 窗。</p></div><div class="settings-fields">
+            <label class="wide" for="set-glm_api_key"><span class="field-label">智谱 GLM API Key <span id="glm-key-status" class="key-status">未配置</span></span><input id="set-glm_api_key" type="password" autocomplete="new-password" placeholder="输入密钥，留空则不变" spellcheck="false"></label>
+            <label class="wide" for="set-vision_endpoint"><span class="field-label">视觉接口地址</span><input id="set-vision_endpoint" type="url" required placeholder="https://open.bigmodel.cn/api/paas/v4/chat/completions"></label>
+            <label for="set-vision_model"><span class="field-label">视觉模型</span><input id="set-vision_model" type="text" required placeholder="glm-5.3-flash"></label>
+          </div></section>
+          <section class="settings-section"><div class="settings-section-title"><h2>本地目录与转写</h2><p>V2 生成文案不需要先转写。已有转写功能仍可用于素材校对，模型需提前放在本机。</p></div><div class="settings-fields">
+            <label class="wide" for="set-output_dir"><span class="field-label">成片输出目录</span><span class="input-action"><input id="set-output_dir" type="text" required><button class="button choose-setting-folder" data-for="set-output_dir" type="button">选择</button></span></label>
+            <label class="wide" for="set-download_dir"><span class="field-label">抖音素材保存目录</span><span class="input-action"><input id="set-download_dir" type="text" required><button class="button choose-setting-folder" data-for="set-download_dir" type="button">选择</button></span></label>
+            <label class="wide" for="set-asr_model_path"><span class="field-label">本地 faster-whisper 模型目录</span><span class="input-action"><input id="set-asr_model_path" type="text" placeholder="可选；V2 脚本生成不依赖转写"><button class="button choose-setting-folder" data-for="set-asr_model_path" type="button">选择</button></span></label>
+            <label for="set-asr_device"><span class="field-label">转写设备</span><select id="set-asr_device"><option value="cpu">CPU · 通用模式</option><option value="cuda">NVIDIA CUDA · 需兼容环境</option></select></label>
+            <div class="environment-check"><span class="field-label">运行环境</span><div id="environment-status" class="environment-status">正在检查</div></div>
+          </div></section>
+          <section class="settings-section"><div class="settings-section-title"><h2>声音与剪辑</h2><p>背景音乐连续播放。转场先作用于画面，再叠加字幕。</p></div><div class="settings-fields">
+            <label for="set-transition"><span class="field-label">转场方式</span><select id="set-transition"><option value="fade">轻柔交叉淡化</option><option value="none">直切 · 无转场</option></select></label>
+            <label for="set-transition_seconds"><span class="field-label">转场时长 / 秒</span><input id="set-transition_seconds" type="number" min="0" max="0.8" step="0.05"></label>
+            <label for="set-target_seconds"><span class="field-label">默认目标时长 / 秒</span><input id="set-target_seconds" type="number" min="5" max="60" step="1"></label>
+            <label for="set-output_count"><span class="field-label">默认生成数量 / 条</span><input id="set-output_count" type="number" min="1" max="5" step="1"></label>
+          </div></section>
+          <section class="settings-section"><div class="settings-section-title"><h2>画面清理与字幕</h2><p>先清理原字幕 / 水印，再在清理区域叠加新字幕。区域按原视频高度计算，适用于固定位置；移动水印需单独处理。模糊和区域修补不是 AI 无痕修复，请先看成片样片再调整区域，避免影响商品细节。</p></div><div class="settings-fields">
+            <label for="set-clean_mode"><span class="field-label">原字幕 / 水印处理</span><select id="set-clean_mode"><option value="none">不处理</option><option value="blur">指定区域模糊</option><option value="delogo">指定区域修补（delogo）</option></select></label>
+            <label for="set-clean_top_pct"><span class="field-label">处理区域上沿 / 原视频高度 %</span><input id="set-clean_top_pct" type="number" min="0" max="95" step="1"></label>
+            <label for="set-clean_height_pct"><span class="field-label">处理区域高度 / 原视频高度 %</span><input id="set-clean_height_pct" type="number" min="3" max="45" step="1"></label>
+            <label for="set-subtitle_font_size"><span class="field-label">字幕字号 / 像素</span><input id="set-subtitle_font_size" type="number" min="16" max="96" step="1"></label>
+            <label for="set-subtitle_margin_pct"><span class="field-label">字幕底部距离 / 画面 %</span><input id="set-subtitle_margin_pct" type="number" min="2" max="40" step="1"></label>
+            <label class="checkbox-label setting-check"><input id="set-caption_plate" type="checkbox"><span>添加字幕背景底板（可选）<span class="field-hint">关闭后只显示描边文字，不添加黑色横框。</span></span></label>
+          </div></section>
+          <section class="settings-section"><div class="settings-section-title"><h2>编码与性能</h2><p>先保证单条成片稳定。增加并发会提高 CPU、显存和磁盘占用。</p></div><div class="settings-fields">
+            <label for="set-encoder"><span class="field-label">视频编码器</span><select id="set-encoder"><option value="cpu">CPU / H.264</option><option value="nvenc">NVIDIA / NVENC</option><option value="qsv">Intel / QSV</option></select></label>
+            <label for="set-preset"><span class="field-label">编码偏好</span><select id="set-preset"><option value="fast">速度优先</option><option value="balanced">均衡</option><option value="quality">质量优先</option></select></label>
+            <label for="set-width"><span class="field-label">画面宽度 / 像素</span><input id="set-width" type="number" min="240" max="1920" step="2"></label>
+            <label for="set-height"><span class="field-label">画面高度 / 像素</span><input id="set-height" type="number" min="240" max="1920" step="2"></label>
+            <label for="set-fps"><span class="field-label">帧率</span><select id="set-fps"><option value="24">24 fps</option><option value="25">25 fps</option><option value="30">30 fps</option><option value="60">60 fps</option></select></label>
+            <label for="set-render_concurrency"><span class="field-label">合成并发</span><select id="set-render_concurrency"><option value="1">1 路 · 推荐起步</option><option value="2">2 路</option><option value="3">3 路</option></select></label>
+          </div></section>
+          <section class="settings-section" aria-labelledby="storage-title"><div class="settings-section-title"><h2 id="storage-title">存储管理</h2><p>仅清理程序自身的临时文件、日志和未引用缓存。素材、文案与成片保持不变。</p></div><div class="settings-fields"><p id="storage-summary" class="wide field-hint" role="status">点击“查看占用”检查本地存储。默认只清理过期临时文件和日志。</p><div id="storage-usage" class="wide storage-usage"></div><label class="wide checkbox-label"><input id="storage-include-caches" type="checkbox"><span>同时清理未引用缓存（再次使用可能产生接口费用）</span></label><div class="wide storage-actions"><button id="refresh-storage" class="button" type="button">查看占用</button><button id="clean-storage" class="button button-danger" type="button">清理存储</button></div></div></section>
+          <div class="settings-footer"><span id="settings-status" class="muted">设置尚未更改</span><button id="save-settings" type="submit" class="button button-primary">保存设置</button></div>
+        </form>
+      </section>
+    </main>
+  </div>
+  <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+  <dialog id="confirm-dialog" aria-labelledby="confirm-title" aria-describedby="confirm-description"><div class="dialog-body"><div class="dialog-icon"><svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg></div><h2 id="confirm-title">确认操作</h2><p id="confirm-description"></p><div class="dialog-actions"><button id="confirm-cancel" class="button">取消</button><button id="confirm-accept" class="button button-primary">确认继续</button></div></div></dialog>
+  <dialog id="job-detail-dialog" class="job-detail-dialog" aria-labelledby="job-detail-title"><div class="dialog-header"><h2 id="job-detail-title">任务详情</h2><button id="close-job-detail" class="button button-small" type="button">关闭</button></div><pre id="job-detail-content" class="job-detail-content"></pre></dialog>
+  <dialog id="asset-dialog" class="asset-dialog" aria-labelledby="asset-dialog-title"><div class="dialog-header"><div><h2 id="asset-dialog-title">素材预览</h2><p id="asset-dialog-meta" class="muted"></p></div><button id="close-asset-dialog" class="button button-icon" aria-label="关闭素材预览"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div><div class="asset-dialog-content"><video id="asset-preview" controls playsinline preload="metadata" aria-label="素材视频预览"></video><div class="transcript-editor"><h3>原视频文案与时间码</h3><p class="field-hint">每行一段：开始秒数 | 结束秒数 | 文案。时间必须在源视频范围内。校对后保存，保留为素材参考。</p><label class="sr-only" for="transcript-text">时间码转写文案</label><textarea id="transcript-text" rows="12" spellcheck="false" placeholder="0 | 3.5 | 鞋底纹路展示&#10;3.5 | 7 | 加厚鞋底和鞋面细节"></textarea><p id="transcript-error" class="inline-error" role="alert" hidden></p><button id="save-transcript" class="button button-primary">保存转写文案</button><p id="transcript-status" class="field-hint" role="status"></p></div></div></dialog>
+  <noscript><p class="banner banner-error">本地工作台需要启用 JavaScript。请使用桌面启动脚本打开程序。</p></noscript>
+</body>
+</html>

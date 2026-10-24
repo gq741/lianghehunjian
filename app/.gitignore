@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+*.sqlite*
+.env*
+data/
+build/
+dist/
+verification/runtime/
+verification/rollback-copy/
+verification/*.log
+verification/*.mp4
+verification/*.wav
+verification/*.raw
+verification/*.png
