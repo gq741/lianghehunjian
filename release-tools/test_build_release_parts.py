@@ -193,6 +193,19 @@ class ReleasePartsTests(unittest.TestCase):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 module.split_archive(Path("unused"), self.output, value)
 
+    def test_cli_part_bytes_override(self):
+        evidence = self.root / "small-build-evidence.json"
+        done = subprocess.run([sys.executable, "-B", "-X", "utf8", str(SCRIPT), "--source", str(self.source),
+                               "--output", str(self.output), "--archive-dir", str(self.archive_dir),
+                               "--part-bytes", "512", "--evidence", str(evidence)],
+                              text=True, encoding="utf-8", capture_output=True)
+        self.assertEqual(done.returncode, 0, done.stderr + done.stdout)
+        record = json.loads(evidence.read_text(encoding="utf-8"))
+        self.assertEqual(record["input"]["part_bytes"], 512)
+        self.assertEqual(record["result"]["part_bytes"], 512)
+        self.assertGreater(record["result"]["parts"], 1)
+        self.assertTrue(all(part["bytes"] == 512 for part in self.manifest()["parts"][:-1]))
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -243,19 +243,22 @@ def main() -> int:
     parser.add_argument("--source", type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--archive-dir", type=Path)
+    parser.add_argument("--part-bytes", type=int, default=PART_BYTES,
+                        help="Raw part size in bytes; default 1000000000, must be below 2 GiB")
     parser.add_argument("--verify-assets-only", action="store_true")
     parser.add_argument("--evidence", required=True, type=Path)
     args = parser.parse_args()
     if not args.verify_assets_only and args.source is None:
         parser.error("--source is required for build")
     evidence = {"command": [sys.executable, *sys.argv], "input": {"source": str(args.source) if args.source else None,
-                "output": str(args.output), "archive_dir": str(args.archive_dir) if args.archive_dir else None}, "mode": "verify" if args.verify_assets_only else "build"}
+                "output": str(args.output), "archive_dir": str(args.archive_dir) if args.archive_dir else None,
+                "part_bytes": args.part_bytes}, "mode": "verify" if args.verify_assets_only else "build"}
     start = time.monotonic()
     try:
         if args.verify_assets_only:
             result = verify_assets(args.output, args.archive_dir)
         else:
-            result = build(args.source, args.output, args.archive_dir or args.output.parent / "archive-cache")
+            result = build(args.source, args.output, args.archive_dir or args.output.parent / "archive-cache", args.part_bytes)
         evidence.update({"result": result, "literal_output": "RELEASE_PARTS=PASS", "exit_status": 0})
     except Exception as exc:
         evidence.update({"error": f"{type(exc).__name__}: {exc}", "literal_output": "RELEASE_PARTS=FAIL", "exit_status": 1})
