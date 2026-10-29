@@ -1,10 +1,23 @@
-量禾混剪 Windows x64 · 2026.10.24
+﻿量禾混剪 v2026.10.29 — 从这里开始
 
-最简单：只下载 Download-Release.cmd 和 Download-Release.ps1 到同一个短目录，
-例如 D:\LiangHeDownload，双击CMD。它会自动下载全部37个小分块和工具，校验、恢复、免费自检。
-自检全部PASS后打开 LiangHeMix\量禾混剪.exe，填写自己的API Key和素材/输出目录即可。
+最新软件下载页：https://github.com/gq741/lianghehunjian/releases/latest
 
-也可以把目录和WORKBUDDY.md交给WorkBuddy负责首次检测。无需预装Python、7-Zip或CUDA。
-手动下载全部47个Assets附件时，可直接运行Restore-Release.cmd；不单独解压part。
-GitHub自动的Source code只有源码，不是完整软件。建议至少12GB空闲空间和短路径。
-允许制作商业带货视频；禁止售卖软件和收费部署；第三方组件保持原许可。
+1. 下载本版 Download-Release.cmd 与 Download-Release.ps1，放在同一个新的短目录（如 D:\LiangHeDownload29）。
+2. 双击 Download-Release.cmd：自动下载、SHA256校验、还原和免费自检；分块数以 PARTS.json 为准，每块至多100,000,000字节。
+3. 自检通过后打开 LiangHeMix\量禾混剪.exe。以后直接开软件。默认 Fish；自己的Key由自己在设置里填写。
+
+GitHub Source code / Code ZIP只有源码，不是完整软件。不要单独解压part。
+下载中断后重跑会复用已校验附件；同名目录或内容冲突会停止，不覆盖已有文件。
+
+更新：先保存退出旧软件，确认并备份实际数据目录（默认 %LOCALAPPDATA%\JDMixStudio\v1）。源素材和成品保留原位置；在新目录安装，不覆盖旧包，不删除用户数据。相同Windows账号下DPAPI Key可延续；换电脑/账号需重新填写。先检查旧任务、旧音频及Fish设置是否保留。
+旧下载入口固定旧tag，没有自动更新；升级到29需重新下载新版两个入口。
+
+MiniMax使用独立的国内开放平台Key，选HD/Turbo模型与音色后保存。换服务请新建生成任务，不跨服务重试旧任务。免费检测不触发收费；收费操作需本次另行确认。
+
+Windows 10 22H2 / Windows 11，Intel/AMD x64，默认CPU。无需新装Python、7-Zip或CUDA。缺系统组件时使用随包官方安装器，确认/重启由用户处理，之后重新免费自检。
+报告：download-report.json、LiangHeMix-restore-report-*.json、LiangHeMix\logs\selfcheck.json。
+退出0：本次还原与免费自检通过；1：下载/还原未完成；2：文件已还原，环境需处理。
+本机启动自检是门禁，不代表新电脑或真实云API已验收。当前验证记录以发布证据为准。
+
+允许商业带货成片；自有软件禁止软件销售、白标转售、收费部署及收费托管。第三方独立许可。详见LICENSE.txt与THIRD_PARTY_NOTICES.md。
+详细说明及WorkBuddy任务见WORKBUDDY.md。

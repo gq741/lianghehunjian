@@ -1,28 +1,30 @@
 # 量禾混剪
 
-允许商业带货成片的 Windows 本地混剪工作台。自有代码允许免费使用、修改与免费分享，禁止软件售卖和收费部署；第三方组件按原许可证。详见 [LICENSE.txt](LICENSE.txt)。这是自定义许可的公开源码项目，不是MIT/Apache式自由商用授权。
+面向 Windows 的本地带货视频混剪工作台。允许制作和使用商业带货成片；项目自有软件允许免费使用、修改与免费分享，禁止软件销售、白标转售、收费部署及收费托管。第三方组件独立适用原许可证。详见 [LICENSE.txt](LICENSE.txt) 与 [第三方声明](THIRD_PARTY_NOTICES.md)。
 
-## 朋友下载使用
+## 下载完整软件
 
-请进入 **[Releases软件下载页](https://github.com/gq741/lianghehunjian/releases/tag/v2026.10.24)**，下载全部附件并按 [WorkBuddy说明书](WORKBUDDY.md) 操作。
-GitHub的“Code → Download ZIP”和Release自动的“Source code”只有源码，不能代替完整运行包。
+进入 **[最新软件下载页](https://github.com/gq741/lianghehunjian/releases/latest)**。当前版是 **v2026.10.29**，最简入口：
 
-最简单的方式是只先下载 **Download-Release.cmd** 和 **Download-Release.ps1** 到同一短目录（例如 `D:\LiangHeDownload`），双击CMD自动下载全部37个小分块并校验、还原、自检。
-自检通过后运行恢复目录的 `量禾混剪.exe`。网络中断后再次运行会复用已校验的小分块；也可手动下载全部47个附件后运行Restore-Release.cmd。
-下载阶段报错先看同目录 `download-report.json`；已经进入还原阶段再看 `LiangHeMix-restore-report-*.json`。
-第一次可以让WorkBuddy负责检测，以后直接运行软件。不需要用户预装Python、CUDA或7-Zip。系统缺组件时使用随包官方安装器。
+1. 下载 [Download-Release.cmd](https://github.com/gq741/lianghehunjian/releases/download/v2026.10.29/Download-Release.cmd) 和 [Download-Release.ps1](https://github.com/gq741/lianghehunjian/releases/download/v2026.10.29/Download-Release.ps1)，放进同一个新的短目录，例如 `D:\LiangHeDownload29`。
+2. 双击 `Download-Release.cmd`，自动下载该版分块、校验、还原到同目录的 `LiangHeMix`，并运行免费自检。每块至多 100,000,000 字节，数量以 `PARTS.json` 为准；中断后重跑会复用已校验附件。
+3. 自检通过后打开 `LiangHeMix\量禾混剪.exe`。首次填写自己的 API Key；收费生成仍由用户当前操作确认。
 
-目标为Windows10 22H2/Windows11 Intel/AMD x64，默认CPU。用户在软件界面填写自己的DeepSeek/GLM/Fish Key，云服务费用由自己的账号承担。
+**“Code → Download ZIP”和 GitHub 自动生成的“Source code”是源码，不是完整可运行软件。** 不要单独解压 `.part`。完整步骤及报告说明见 [WORKBUDDY.md](WORKBUDDY.md) 和 [START_HERE.txt](START_HERE.txt)。
 
-## 仓库结构
-- `app/`：本次发布对应的应用源码、界面、提示词与离线回归测试。
-- `release-tools/`：仅用于分包/还原的源代码及测试。
-- `WORKBUDDY.md`：接收电脑的操作顺序和可直接复制的任务提示。
-- 运行时、模型、系统安装器、第三方来源归档放在Releases附件中，不塞进Git历史。
+## 更新前先备份
 
-## 验证说明
-本机换目录/隔离配置测试，本地模型与合成视频导出已验证。没有声称在所有新电脑或所有云接口环境通过。接收端先做免费自检；收费操作由用户当前确认。
-原开发电脑的API Key、AppData、素材、配音缓存与登录状态未上传。
+先保存任务并退出旧软件；确认并备份实际用户数据目录，默认是 `%LOCALAPPDATA%\JDMixStudio\v1`。源素材和成品保持原位置。把新版还原到新目录，不覆盖旧软件、不删除旧包和用户数据。相同 Windows 账号下原 DPAPI Key 可延续；换账号/换电脑需重新填写自己的 Key。更新后先检查旧任务、音频与 Fish 设置是否保留，再做新任务。详细步骤见 [更新流程](WORKBUDDY.md#更新流程)。
 
-## 第三方
-FFmpeg等原始许可证和精确来源资料随完整发布包提供；[第三方声明](THIRD_PARTY_NOTICES.md)。项目自有许可的售卖/部署限制不限制第三方原许可证已经赋予的权利。
+没有自动更新。旧 `Download-Release` 固定旧版本，不会升级到 29；更新时必须从最新发布页重新下载新版两个入口。
+
+## 使用条件
+
+- Windows 10 22H2 / Windows 11，Intel/AMD x64，默认 CPU。
+- Python、锁定依赖、本地模型、FFmpeg 随完整包提供，无需新装 Python、7-Zip 或 CUDA。缺少系统组件时仅按检测提示使用随包官方安装器；安装确认和重启由用户处理，之后重新免费自检。
+- 默认配音为 Fish；MiniMax 使用独立的国内开放平台 Key。切换前在设置中选定 HD 或 Turbo 模型、音色并保存；换服务后新建生成任务，不跨服务重试旧任务。
+- 本地免费自检及启动门禁只说明当前电脑的本地运行条件，不等于新电脑或真实云 API 已通过。验证记录以该版发布证据为准。
+
+## 仓库与许可
+
+`app/` 是应用源码；`release-tools/` 是分包、下载、还原工具及离线测试。运行时、模型、系统安装器及第三方来源资料在 Releases 完整附件中，不在源码 ZIP 中。用户 Key、AppData、素材、历史音频和登录状态不属于公开包内容。

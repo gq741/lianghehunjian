@@ -19,9 +19,9 @@ function Get-DownloadSha256([string]$Path) {
 
 function Get-ReleaseMetadata {
     # Exactly one release metadata request, not one API request per part.
-    $uri = 'https://api.github.com/repos/gq741/lianghehunjian/releases/tags/v2026.10.24'
+    $uri = 'https://api.github.com/repos/gq741/lianghehunjian/releases/tags/v2026.10.29'
     return Invoke-RestMethod -Uri $uri -Method Get -TimeoutSec 60 -Headers @{
-        'User-Agent' = 'LiangHeMix-Public-Downloader/2026.10.24'
+        'User-Agent' = 'LiangHeMix-Public-Downloader/2026.10.29'
         'Accept' = 'application/vnd.github+json'
     }
 }
@@ -29,7 +29,7 @@ function Get-ReleaseMetadata {
 function Receive-AssetBytes([string]$Uri, [string]$Path) {
     # No WebSession, cookies, credentials or Authorization header are supplied.
     Invoke-WebRequest -Uri $Uri -Method Get -UseBasicParsing -MaximumRedirection 10 -TimeoutSec 1800 `
-        -UserAgent 'LiangHeMix-Public-Downloader/2026.10.24' -OutFile $Path | Out-Null
+        -UserAgent 'LiangHeMix-Public-Downloader/2026.10.29' -OutFile $Path | Out-Null
 }
 
 function Assert-ReleaseAsset($Asset) {
@@ -39,7 +39,7 @@ function Assert-ReleaseAsset($Asset) {
     }
     [long]$size = $Asset.size
     if ($size -ne $Asset.size) { throw 'GitHub 附件大小无效。' }
-    $expected = 'https://github.com/gq741/lianghehunjian/releases/download/v2026.10.24/' + [Uri]::EscapeDataString($Asset.name)
+    $expected = 'https://github.com/gq741/lianghehunjian/releases/download/v2026.10.29/' + [Uri]::EscapeDataString($Asset.name)
     $uri = [Uri]$Asset.browser_download_url
     if (-not $uri.IsAbsoluteUri -or $uri.Scheme -cne 'https' -or $uri.DnsSafeHost -cne 'github.com' -or
         $uri.Port -ne 443 -or $uri.UserInfo -ne '' -or $uri.Fragment -ne '' -or $uri.Query -ne '' -or
@@ -94,7 +94,7 @@ function Get-DownloadAsset($Asset, [string]$Directory) {
 
 function Invoke-DownloadRelease([string]$Directory, [bool]$Only) {
     $report = [ordered]@{
-        schema = 1; product = '量禾混剪'; release = 'v2026.10.24'; paid_calls = 0
+        schema = 1; product = '量禾混剪'; release = 'v2026.10.29'; paid_calls = 0
         started_utc = [DateTime]::UtcNow.ToString('o'); status = 'STARTED'; stage = 'input'
         download_dir = $null; assets = @(); error = $null; exit_code = 1
     }
@@ -111,12 +111,12 @@ function Invoke-DownloadRelease([string]$Directory, [bool]$Only) {
         Write-Host '建议放在 D:\LiangHeDownload 等短目录；请预留分块、合并 ZIP 和完整软件所需空间。'
         $report.stage = 'release_metadata'
         $release = Get-ReleaseMetadata
-        if ($release.tag_name -cne 'v2026.10.24' -or $release.draft -ne $false) { throw '公开发布版本不符合约定。' }
+        if ($release.tag_name -cne 'v2026.10.29' -or $release.draft -ne $false) { throw '公开发布版本不符合约定。' }
         $requiredNames = @('PARTS.json', 'Restore-Release.ps1', 'Restore-Release.cmd', 'WORKBUDDY.md',
                            'START_HERE.txt', 'LICENSE.txt', 'ReleaseNotes.md', 'SHA256SUMS.txt')
         $assets = New-Object 'Collections.Generic.Dictionary[string,object]' ([StringComparer]::OrdinalIgnoreCase)
         foreach ($asset in $release.assets) {
-            $selected = $requiredNames -ccontains $asset.name -or $asset.name -cmatch '^LiangHeMix-20261024\.zip\.part(?:0[1-9]|[1-9][0-9])$'
+            $selected = $requiredNames -ccontains $asset.name -or $asset.name -cmatch '^LiangHeMix-20261029\.zip\.part(?:0[1-9]|[1-9][0-9])$'
             if (-not $selected) { continue }
             if ($assets.ContainsKey($asset.name)) { throw ('发布附件重名：' + $asset.name) }
             Assert-ReleaseAsset $asset
@@ -128,7 +128,7 @@ function Invoke-DownloadRelease([string]$Directory, [bool]$Only) {
         $report.stage = 'download_manifest'
         $report.assets += Get-DownloadAsset $assets['PARTS.json'] $full
         $parts = Get-Content -LiteralPath (Join-Path $full 'PARTS.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-        if ($parts.schema -ne 1 -or $parts.root_dir -cne 'LiangHeMix' -or $parts.archive_name -cne 'LiangHeMix-20261024.zip' -or
+        if ($parts.schema -ne 1 -or $parts.root_dir -cne 'LiangHeMix' -or $parts.archive_name -cne 'LiangHeMix-20261029.zip' -or
             $parts.archive_sha256 -cnotmatch '^[a-fA-F0-9]{64}$' -or $parts.manifest_sha256 -cnotmatch '^[a-fA-F0-9]{64}$') {
             throw 'PARTS.json 格式不符合发布约定。'
         }
@@ -139,7 +139,7 @@ function Invoke-DownloadRelease([string]$Directory, [bool]$Only) {
         [long]$partBytes = 0
         for ($i = 0; $i -lt $partRows.Count; $i++) {
             $row = $partRows[$i]
-            $name = 'LiangHeMix-20261024.zip.part{0:D2}' -f ($i + 1)
+            $name = 'LiangHeMix-20261029.zip.part{0:D2}' -f ($i + 1)
             if ($row.name -cne $name -or -not $assets.ContainsKey($name)) { throw ('缺少或顺序错误的分块：' + $name) }
             if ($row.bytes -le 0 -or [long]$row.bytes -ne $assets[$name].size -or
                 $row.sha256 -cnotmatch '^[a-fA-F0-9]{64}$' -or ('sha256:' + $row.sha256.ToLowerInvariant()) -cne $assets[$name].digest.ToLowerInvariant()) {

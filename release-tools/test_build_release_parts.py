@@ -49,6 +49,11 @@ class ReleasePartsTests(unittest.TestCase):
     def manifest(self):
         return json.loads((self.output / "PARTS.json").read_text(encoding="utf-8"))
 
+    def test_current_version_and_100mb_default(self):
+        self.assertEqual('20261029', module.VERSION)
+        self.assertEqual('LiangHeMix-20261029.zip', module.ARCHIVE_NAME)
+        self.assertEqual(100_000_000, module.PART_BYTES)
+
     def test_build_stored_crc_hash_and_fixed_raw_parts(self):
         result = self.build()
         self.assertTrue(result["parts_verified"])

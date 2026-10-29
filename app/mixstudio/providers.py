@@ -45,12 +45,18 @@ from .diagnostics import normalize_diagnostic
 DEFAULT_VOICE_ID = "be40aff9ee7b4d0cba3bb35e924d85b2"
 DEFAULT_DEEPSEEK_MODEL = "deepseek-flash"
 FISH_MODEL = "s2.1-pro"
+DEFAULT_MINIMAX_VOICE_ID = "male-qn-qingse"
+DEFAULT_MINIMAX_MODEL = "speech-2.8-hd"
+MINIMAX_MODELS = ("speech-2.8-hd", "speech-2.8-turbo")
 DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
 FISH_URL = "https://api.fish.audio/v1/tts"
+MINIMAX_URL = "https://api.minimax.cn/v1/t2a_v2"
 HTTP_TIMEOUT = 60
 HTTP_TOTAL_SECONDS = 180
 MAX_AUDIO_BYTES = 32 * 1024 * 1024
 MAX_JSON_BYTES = 2 * 1024 * 1024
+# Hex doubles the PCM body; reserve bounded space for the JSON envelope too.
+MAX_MINIMAX_JSON_BYTES = 2 * MAX_AUDIO_BYTES + MAX_JSON_BYTES
 
 
 class ProviderError(RuntimeError):
@@ -575,6 +581,148 @@ def synthesize_voice(text: str, output: Path, *, api_key: str,
         stream.close()
         if not completed:
             output.unlink(missing_ok=True)
+
+
+# Official synchronous T2A and error code contracts checked 2026-10-28:
+# https://platform.minimax.cn/docs/api-reference/speech-t2a-http
+# https://platform.minimax.cn/docs/api-reference/errorcode
+_MINIMAX_REJECTIONS = {
+    1002: ("request_limit", "MiniMax 接口限流，请稍后手动重试。"),
+    1004: ("invalid_key", "MiniMax API 密钥无效，请在设置页更新。"),
+    1008: ("provider_error", "MiniMax 余额不足，请到服务商网站检查。"),
+    1026: ("invalid_input", "MiniMax 未接受输入内容，请调整配音文案。"),
+    1041: ("request_limit", "MiniMax 连接数超限，请稍后手动重试。"),
+    1042: ("invalid_input", "MiniMax 输入含有过多无效字符，请检查配音文案。"),
+    1045: ("request_limit", "MiniMax 任务并发数超限，请稍后手动重试。"),
+    2013: ("invalid_input", "MiniMax 参数校验未通过，请检查模型与音色设置。"),
+    20132: ("invalid_input", "MiniMax 音色参数错误，请检查音色 ID。"),
+    2014: ("invalid_input", "MiniMax 未接受空输入，请检查配音文案。"),
+    2022: ("provider_error", "MiniMax 模型不存在或当前账户无权使用。"),
+    2042: ("provider_error", "当前 MiniMax 账户无权使用该音色。"),
+    2043: ("invalid_input", "MiniMax 当前模型不支持该音色，请检查设置。"),
+    2045: ("request_limit", "MiniMax 请求频率增长超限，请稍后手动重试。"),
+    2046: ("request_limit", "MiniMax 用量增长超限，请稍后手动重试。"),
+    2047: ("request_limit", "MiniMax 连接数增长超限，请稍后手动重试。"),
+    2049: ("invalid_key", "MiniMax API 密钥无效，请在设置页更新。"),
+    2053: ("provider_error", "MiniMax 积分不足，请到服务商网站检查。"),
+    2054: ("invalid_input", "MiniMax 音色不存在，请检查音色 ID。"),
+    2061: ("provider_error", "MiniMax 当前套餐不支持该模型。"),
+    2062: ("request_limit", "MiniMax 套餐速率受限，请检查账户后手动重试。"),
+    2067: ("provider_error", "MiniMax 套餐额度已用完，请到服务商网站检查。"),
+    2068: ("provider_error", "MiniMax 当前套餐等级不支持该模型。"),
+    2069: ("invalid_input", "MiniMax 模型已下线，请在设置页选择在售模型。"),
+}
+
+
+def synthesize_minimax_voice(text: str, output: Path, *, api_key: str,
+                            voice_id: str = DEFAULT_MINIMAX_VOICE_ID,
+                            model: str = DEFAULT_MINIMAX_MODEL,
+                            cancel=None, commit_complete=False) -> dict:
+    """One official non-streaming hex-WAV attempt; never retry or switch provider.
+
+    Only documented pre-generation rejections have result_unknown=False. A bad,
+    incomplete, timed-out or undocumented response may still be billable. A
+    completed PCM WAV is validated before exclusive output creation. As with
+    Fish, commit_complete preserves a fully received success on late cancellation.
+    """
+    _check_cancel(cancel)
+    text = _text(text, "配音文案", 2000)
+    api_key = _key(api_key)
+    voice_id = _text(voice_id, "MiniMax 音色 ID", 256)
+    if any(ord(c) < 32 or 127 <= ord(c) <= 159 for c in voice_id):
+        raise ProviderError("MiniMax 音色 ID 格式不正确，请检查设置。", code="invalid_input")
+    if not isinstance(model, str) or model not in MINIMAX_MODELS:
+        raise ProviderError("请选择支持的 MiniMax 配音模型。", code="invalid_input")
+    output = Path(output)
+    if (not output.is_absolute() or output.suffix.lower() != ".wav"
+            or any(ord(c) < 32 for c in str(output))):
+        raise ProviderError("MiniMax 配音输出须为绝对路径的 WAV 文件。", code="invalid_input")
+    if not output.parent.is_dir():
+        raise ProviderError("配音输出文件夹不存在。", code="invalid_input")
+    if output.exists() or output.is_symlink():
+        raise ProviderError("配音文件已经存在，请复用已有结果或选择新文件名。",
+                            code="output_exists")
+    body, content_type = _post(
+        MINIMAX_URL, {"model": model, "text": text, "stream": False,
+                      "output_format": "hex", "language_boost": "Chinese",
+                      "voice_setting": {"voice_id": voice_id, "speed": 1, "vol": 1, "pitch": 0},
+                      "audio_setting": {"sample_rate": 32000, "format": "wav", "channel": 1}},
+        api_key, maximum=MAX_MINIMAX_JSON_BYTES, cancel=cancel, require_framing=True,
+        **({"commit_complete": True} if commit_complete else {}),
+    )
+    if not commit_complete:
+        _check_cancel(cancel, submitted=True)
+    try:
+        if content_type.split(";", 1)[0].strip() != "application/json":
+            raise ValueError
+        value = json.loads(body, object_pairs_hook=_diagnostic_object)
+        if not isinstance(value, dict) or not isinstance(value.get("base_resp"), dict):
+            raise ValueError
+        status = value["base_resp"].get("status_code")
+        if type(status) is not int:
+            raise ValueError
+    except (ValueError, TypeError, AttributeError, RecursionError, OverflowError):
+        raise ProviderError("MiniMax 响应格式异常，服务端结果待确认；未自动重试。",
+                            code="invalid_response", result_unknown=True) from None
+    if status != 0:
+        # Never propagate status_msg, trace_id, raw JSON or submitted text/key.
+        diagnostic = {"request_phase": "read"}
+        if api_key not in str(status) and text not in str(status):
+            diagnostic["business_code"] = status
+        code, message = _MINIMAX_REJECTIONS.get(status, (
+            "provider_error", "MiniMax 返回服务异常，服务端结果待确认。"))
+        raise ProviderError(message + "未自动重试。", code=code,
+                            result_unknown=status not in _MINIMAX_REJECTIONS,
+                            diagnostic=diagnostic)
+    data = value.get("data")
+    if not isinstance(data, dict) or type(data.get("status")) is not int or data["status"] != 2:
+        raise ProviderError("MiniMax 未返回明确完成的配音结果，服务端结果待确认；未自动重试。",
+                            code="invalid_response", result_unknown=True)
+    try:
+        encoded = data.get("audio")
+        if (not isinstance(encoded, str) or not 88 <= len(encoded) <= 2 * MAX_AUDIO_BYTES
+                or len(encoded) % 2 or re.fullmatch(r"[0-9a-fA-F]+", encoded) is None):
+            raise ValueError
+        audio = bytes.fromhex(encoded)
+        # MiniMax is non-streaming: never accept/repair Fish streaming sentinels.
+        if audio[:4] != b"RIFF" or struct.unpack_from("<I", audio, 4)[0] != len(audio) - 8:
+            raise ValueError
+        _normalize_fish_wav(audio)  # Complete RIFF chunks and PCM structure only.
+        with wave.open(io.BytesIO(audio), "rb") as wav:
+            if wav.getframerate() != 32000 or wav.getnchannels() != 1 or wav.getsampwidth() != 2:
+                raise ValueError
+            duration = wav.getnframes() / wav.getframerate()
+            if len(wav.readframes(wav.getnframes())) != wav.getnframes() * 2:
+                raise ValueError
+    except (ValueError, TypeError, wave.Error, EOFError, ZeroDivisionError, struct.error):
+        raise ProviderError("MiniMax 配音 WAV 文件不完整或格式异常，结果待确认；未自动重试。",
+                            code="invalid_audio", result_unknown=True) from None
+    if not commit_complete:
+        _check_cancel(cancel, submitted=True)
+    created = completed = False
+    try:
+        with output.open("xb") as stream:
+            created = True
+            if stream.write(audio) != len(audio):
+                raise OSError
+            stream.flush()
+            os.fsync(stream.fileno())
+        completed = True
+    except FileExistsError:
+        raise ProviderError("配音文件已经存在，已保留原文件；MiniMax 服务端结果已返回，未自动重试。",
+                            code="output_exists", result_unknown=True) from None
+    except OSError:
+        raise ProviderError("MiniMax 配音结果保存失败，服务端结果已返回；未自动重试。",
+                            code="file_error", result_unknown=True) from None
+    finally:
+        if created and not completed:
+            try:
+                output.unlink(missing_ok=True)
+            except OSError:
+                raise ProviderError("MiniMax 配音保存失败，临时输出清理失败；未自动重试。",
+                                    code="file_error", result_unknown=True,
+                                    diagnostic={"cleanup_failed": True}) from None
+    return {"path": str(output), "duration": duration}
 
 
 def _require_module(name: str) -> None:

@@ -112,10 +112,10 @@
             <div class="section-title"><h2 id="mix-preview-heading">片段预览</h2></div>
             <div class="preview-canvas"><video id="mix-preview" controls playsinline preload="metadata" aria-label="视频预览" hidden></video><div id="mix-preview-empty"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg><p>展开“预览与替换画面”查看匹配片段</p></div></div>
             <p id="mix-preview-caption" class="field-hint">最终配音、转场与字幕以导出成片为准。</p>
-            <div class="render-summary"><div><span>声音</span><strong>Fish Audio</strong></div><div><span>画面处理</span><strong id="cleaning-label">待同步</strong></div><div><span>镜头衔接</span><strong id="transition-label">轻柔淡化</strong></div></div>
+            <div class="render-summary"><div><span>声音</span><strong id="voice-provider-label">待同步</strong></div><div><span>画面处理</span><strong id="cleaning-label">待同步</strong></div><div><span>镜头衔接</span><strong id="transition-label">轻柔淡化</strong></div></div>
             <button id="render-draft" class="button button-primary button-full" aria-describedby="render-action-reason"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg>确认并生成本条视频</button>
             <p id="render-action-reason" class="action-reason" role="status" hidden></p><button id="render-all" class="button button-full" hidden>生成全部文案对应视频</button>
-            <p class="field-hint">确认后先免费预检，再生成整条配音、自动匹配画面并导出。会确认 Fish、GLM 和 DeepSeek 的可能费用，成功缓存复用；不保留素材原始口播。</p>
+            <p id="render-cost-hint" class="field-hint">确认后先免费预检，再生成整条配音、自动匹配画面并导出。会确认所选配音服务、GLM 和 DeepSeek 的可能费用，成功缓存复用；不保留素材原始口播。</p>
           </aside>
         </div>
         <div id="mix-empty" class="mix-empty"><svg class="icon" aria-hidden="true"><use href="#i-text"/></svg><div><h2>文案准备好后，在这里调整</h2><p>填写京东链接并读取商品，选好秒数和条数，再生成文案。</p></div></div>
@@ -129,8 +129,14 @@
           <section class="settings-section"><div class="settings-section-title"><h2>模型服务</h2><p>密钥保存后不会回显。留空可保留已保存的密钥。</p></div><div class="settings-fields">
             <label for="set-deepseek_api_key"><span class="field-label">DeepSeek API Key <span id="deepseek-key-status" class="key-status">未配置</span></span><input id="set-deepseek_api_key" type="password" autocomplete="new-password" placeholder="输入密钥，留空则不变" spellcheck="false"></label>
             <label for="set-deepseek_model"><span class="field-label">DeepSeek 模型</span><input id="set-deepseek_model" type="text" placeholder="deepseek-flash" required></label>
-            <label for="set-fish_api_key"><span class="field-label">Fish Audio API Key <span id="fish-key-status" class="key-status">未配置</span></span><input id="set-fish_api_key" type="password" autocomplete="new-password" placeholder="输入密钥，留空则不变" spellcheck="false"></label>
-            <label for="set-voice_id"><span class="field-label">Fish 音色 ID</span><input id="set-voice_id" type="text" placeholder="be40aff9ee7b4d0cba3bb35e924d85b2" required><span class="field-hint">可粘贴 Fish 网站上的其他音色 ID。</span></label>
+          </div></section>
+          <section class="settings-section"><div class="settings-section-title"><h2>配音服务</h2><p>默认使用 Fish Audio。切换服务后需保存设置；切换和保存均不调用配音。两家的音色和密钥分别保留。</p></div><div class="settings-fields">
+            <label class="wide" for="set-voice_provider"><span class="field-label">配音服务</span><select id="set-voice_provider" aria-describedby="voice-provider-hint"><option value="fish">Fish Audio</option><option value="minimax">MiniMax</option></select><span id="voice-provider-hint" class="field-hint">仅在确认生成视频后调用已保存的配音服务。</span></label>
+            <label for="set-fish_api_key" data-voice-provider="fish"><span class="field-label">Fish Audio API Key <span id="fish-key-status" class="key-status">未配置</span></span><input id="set-fish_api_key" type="password" autocomplete="new-password" placeholder="输入密钥，留空则不变" spellcheck="false"></label>
+            <label for="set-voice_id" data-voice-provider="fish"><span class="field-label">Fish 音色 ID</span><input id="set-voice_id" type="text" placeholder="be40aff9ee7b4d0cba3bb35e924d85b2" required><span class="field-hint">可粘贴 Fish 网站上的其他音色 ID。</span></label>
+            <label class="wide" for="set-minimax_api_key" data-voice-provider="minimax" hidden><span class="field-label">MiniMax API Key <span id="minimax-key-status" class="key-status">未配置</span></span><input id="set-minimax_api_key" type="password" autocomplete="new-password" placeholder="输入密钥，留空则不变" spellcheck="false"></label>
+            <label for="set-minimax_model" data-voice-provider="minimax" hidden><span class="field-label">MiniMax 模型</span><select id="set-minimax_model"><option value="speech-2.8-hd">speech-2.8-hd</option><option value="speech-2.8-turbo">speech-2.8-turbo</option></select></label>
+            <label for="set-minimax_voice_id" data-voice-provider="minimax" hidden><span class="field-label">MiniMax 音色 ID</span><input id="set-minimax_voice_id" type="text" maxlength="256" placeholder="male-qn-qingse" required><span class="field-hint">填写 MiniMax 官方系统音色或自定义音色 ID（1–256 个字符）。</span></label>
           </div></section>
           <section class="settings-section"><div class="settings-section-title"><h2>画面识别</h2><p>分析黑屏、模糊、无关引导和商品画面，再按文案匹配。只筛选成片片段，不删除原素材。GLM-5.3-Flash：3 秒一窗、每窗最多 5 帧、每条视频最多 90 窗。</p></div><div class="settings-fields">
             <label class="wide" for="set-glm_api_key"><span class="field-label">智谱 GLM API Key <span id="glm-key-status" class="key-status">未配置</span></span><input id="set-glm_api_key" type="password" autocomplete="new-password" placeholder="输入密钥，留空则不变" spellcheck="false"></label>

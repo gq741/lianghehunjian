@@ -20,6 +20,9 @@ import uuid
 import wave
 
 from .jobs import Cancelled
+from .speech import (selection as speech_selection, validate as validate_speech,
+    metadata as speech_metadata, recorded_settings, synthesize as synthesize_speech,
+    require_retry_selection, require_confirmed_selection)
 from .v2 import require_script_timing, validate_duration
 from .voice_timing import align_segments
 from .output_names import output_directory, reserve_output
@@ -52,8 +55,13 @@ def _distribution(name):
 
 def _audio_key(draft, settings):
     from . import providers
-    return _key(['whole_voice_v1', draft['voiceover'], settings['voice_id'], providers.FISH_MODEL,
-                 providers.FISH_URL, 44100, 'zh-CN', True])
+    chosen = speech_selection(settings)
+    if chosen['provider'] == 'fish':
+        # Preserve existing Fish audio and unknown-request fence keys.
+        return _key(['whole_voice_v1', draft['voiceover'], settings['voice_id'], providers.FISH_MODEL,
+                     providers.FISH_URL, 44100, 'zh-CN', True])
+    return _key(['whole_voice_minimax_v1', draft['voiceover'], chosen['voice_id'],
+                 chosen['model'], providers.MINIMAX_URL, 32000, 'Chinese', 'wav'])
 
 
 def _valid_words(words, duration):
@@ -97,10 +105,10 @@ def _pcm_duration(path):
 
 
 class WholeVoiceActions:
-    def _free_preflight(self, asset_ids, event, progress, *, require_config=True):
+    def _free_preflight(self, asset_ids, event, progress, *, require_config=True, settings_snapshot=None):
         """Real local I/O and decoder/filter checks, never provider requests."""
         from . import media, providers, script_engine, vision
-        settings = self.settings.public()
+        settings = self.settings.public() if settings_snapshot is None else dict(settings_snapshot)
         for name in ('ffmpeg', 'ffprobe'):
             if not shutil.which(name):
                 raise ValueError(f'免费预检：缺少{name}，尚未调用收费接口')
@@ -125,15 +133,19 @@ class WholeVoiceActions:
             if not Path(settings['bgm_path']).is_file() or not media.probe(Path(settings['bgm_path'])).get('has_audio'):
                 raise ValueError('免费预检：背景音乐不存在或音轨无效；尚未调用收费接口')
         if require_config:
-            for name, label in (('deepseek', 'DeepSeek'), ('vision', 'GLM'), ('fish', 'Fish')):
+            chosen = speech_selection(settings)
+            for name, label in (('deepseek', 'DeepSeek'), ('vision', 'GLM'),
+                                (chosen['provider'], chosen['label'])):
                 try:
                     providers._key(self.settings.secret(name))
                 except providers.ProviderError:
                     raise ValueError(f'免费预检：请在设置中检查{label} API Key；尚未调用收费接口') from None
             script_engine._model(settings['deepseek_model'])
             vision.validate_config(settings['vision_endpoint'], settings['vision_model'])
-            if not re.fullmatch(r'[A-Za-z0-9_-]{8,128}', settings['voice_id']):
-                raise ValueError('免费预检：Fish音色ID格式无效')
+            try:
+                validate_speech(settings)
+            except ValueError as exc:
+                raise ValueError('免费预检：' + str(exc)) from None
             model = Path(settings['asr_model_path'])
             if (not model.is_absolute() or not all((model/n).is_file()
                     for n in ('model.bin', 'config.json', 'tokenizer.json'))
@@ -254,8 +266,10 @@ class WholeVoiceActions:
                 attempt = uuid.uuid4().hex
                 _atomic(marker, {'attempt':attempt, 'state':'pending'})
                 try:
-                    providers.synthesize_voice(text, output, api_key=self.settings.secret('fish'),
-                        voice_id=settings['voice_id'], cancel=event, commit_complete=True)
+                    chosen = speech_selection(settings)
+                    synthesize_speech(text, output, settings=settings,
+                        api_key=self.settings.secret(chosen['provider']),
+                        cancel=event, commit_complete=True)
                     # A validated full response has a short non-cancellable commit.
                     duration, signature = _pcm_duration(output), _hash(output)
                     _atomic(marker, {'attempt':attempt,'state':'validated','sha256':signature,'duration':duration})
@@ -393,7 +407,8 @@ class WholeVoiceActions:
         draft = self._v2_draft(job['payload']['draft_id'])
         if draft['revision'] != job['payload']['revision']:
             raise ValueError('文案或画面选择已修改，请确认当前版本后重新生成')
-        return self.produce_whole(draft['id'], allow_paid, retry_unknown=True)
+        require_retry_selection(job['payload'], self.settings.public())
+        return self.produce_whole(draft['id'], allow_paid, retry_unknown=True, retry_payload=job['payload'])
 
     def realign_whole(self, identifier, *, refresh=False):
         """Local-only repair: require an existing, validated paid utterance."""
@@ -404,10 +419,12 @@ class WholeVoiceActions:
                 raise ValueError('该文案已有任务，请等待或取消后再本地对齐')
             settings = self.settings.public()
             record = draft.get('whole_audio') or draft.get('whole_voice') or {}
-            voice_id = record.get('voice_id')
-            if not isinstance(voice_id, str) or not re.fullmatch(r'[A-Za-z0-9_-]{8,128}', voice_id):
-                raise ValueError('已有整条配音缺少有效音色记录；本地对齐未调用收费接口')
-            key = _audio_key(draft, {**settings, 'voice_id':voice_id})
+            try:
+                audio_settings = recorded_settings(settings, record)
+            except ValueError:
+                raise ValueError('已有整条配音缺少有效服务、模型或音色记录；本地对齐未调用收费接口') from None
+            voice_binding = speech_metadata(audio_settings)
+            key = _audio_key(draft, audio_settings)
             audio = self.root/'voice-cache'/('whole-v1-'+key+'.wav')
             if (record.get('key') != key or not audio.is_file()
                     or Path(record.get('path','')).resolve() != audio.resolve()):
@@ -420,7 +437,7 @@ class WholeVoiceActions:
                 duration = _pcm_duration(audio)
                 if signature != record.get('sha256') or duration != record.get('duration'):
                     raise ValueError('整条配音校验失败；未调用收费接口')
-                progress(.1, '仅本地重新对齐整条配音，不调用Fish、GLM或DeepSeek')
+                progress(.1, '仅本地重新对齐整条配音，不调用任何收费接口')
                 with visual_slot(self.asr_slot, event):
                     if refresh:
                         timing = self._align_whole(draft, audio, signature, duration, settings, event, refresh=True)
@@ -432,7 +449,7 @@ class WholeVoiceActions:
                     if current['revision'] != revision:
                         raise ValueError('文案版本已变化；整条音频及本地对齐缓存保留')
                     current['whole_voice'] = {**timing, 'path':str(audio), 'sha256':signature,
-                        'key':key, 'duration':duration, 'voice_id':voice_id}
+                        'key':key, 'duration':duration, **voice_binding}
                     current['production_mode'] = 'whole_voice_v1'
                     current.pop('whole_timeline_plan', None)
                     current['timeline_plan'] = None
@@ -445,9 +462,9 @@ class WholeVoiceActions:
                         'pipeline':'local_alignment', 'warnings':timing['warnings']}
             return self.jobs.submit('alignment', {'draft_id':identifier,'revision':revision}, work)
 
-    def produce_whole(self, identifier, allow_paid, *, retry_unknown=False):
+    def produce_whole(self, identifier, allow_paid, *, retry_unknown=False, retry_payload=None, expected_voice=None):
         if allow_paid is not True:
-            raise ValueError('请确认整条Fish配音、GLM识别与DeepSeek匹配的本次费用')
+            raise ValueError('请确认整条配音、GLM识别与DeepSeek匹配的本次费用')
         with self.action_lock:
             draft = self._v2_draft(identifier)
             require_script_timing(draft)
@@ -457,24 +474,27 @@ class WholeVoiceActions:
             if self._draft_busy(identifier):
                 raise ValueError('该文案已有任务，请等待或取消后再试')
             settings = self.settings.public()
+            require_confirmed_selection(expected_voice, settings)
+            if retry_payload is not None:
+                require_retry_selection(retry_payload, settings)
+            voice_binding = speech_metadata(settings)
             revision = draft['revision']
             retry_attempt = None
             if retry_unknown:
-                from . import providers
-                vk = _key(['whole_voice_v1', draft['voiceover'], settings['voice_id'], providers.FISH_MODEL,
-                           providers.FISH_URL, 44100, 'zh-CN', True])
+                vk = _audio_key(draft, settings)
                 pending = self.root/'voice-cache'/('whole-v1-'+vk+'.pending.json')
                 if pending.exists() and not (self.root/'voice-cache'/('whole-v1-'+vk+'.wav')).exists():
                     retry_attempt = json.loads(pending.read_text(encoding='utf-8'))['attempt']
             def work(event, progress):
                 from . import media
                 from .timeline import shortage_message
-                self._free_preflight(draft['asset_ids'], event, lambda v,m:progress(.1*v,m))
+                self._free_preflight(draft['asset_ids'], event, lambda v,m:progress(.1*v,m),
+                                     settings_snapshot=settings)
                 progress(.12, '整条配音 · 复用成功缓存或一次生成完整口播')
                 audio, key, signature, duration = self._whole_audio(draft,settings,event,retry_attempt)
                 saved = self._v2_draft(identifier)
                 saved['whole_audio'] = {'path':str(audio),'key':key,'sha256':signature,'duration':duration,
-                                        'voice_id':settings['voice_id']}
+                                        **voice_binding}
                 self.store.put_draft(saved)
                 _cancel(event)
                 progress(.23, f'整条配音已保存，实测{duration:.3f}秒；正在本地对齐文案')
@@ -486,7 +506,7 @@ class WholeVoiceActions:
                     if current['revision'] != revision:
                         raise ValueError('文案版本已变化，音频缓存保留')
                     current['whole_voice'] = {**timing,'path':str(audio),'sha256':signature,'key':key,
-                        'duration':duration,'voice_id':settings['voice_id']}
+                        'duration':duration, **voice_binding}
                     current['production_mode'] = 'whole_voice_v1'
                     # The old plan references previous sentence timings. Clear
                     # both views in the same commit, including a later cancel.
@@ -554,4 +574,4 @@ class WholeVoiceActions:
                         self.render_active -= 1
                         self.render_condition.notify_all()
             return self.jobs.submit('render',{'draft_id':identifier,'revision':revision,
-                'pipeline':'whole_voice_v1'},work,production=True)
+                'pipeline':'whole_voice_v1', 'voice':voice_binding},work,production=True)

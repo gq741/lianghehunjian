@@ -17,10 +17,10 @@ import zipfile
 
 
 PRODUCT = "量禾混剪"
-VERSION = "20261024"
-ARCHIVE_NAME = "LiangHeMix-20261024.zip"
+VERSION = "20261029"
+ARCHIVE_NAME = "LiangHeMix-20261029.zip"
 ROOT_DIR = "LiangHeMix"
-PART_BYTES = 1_000_000_000
+PART_BYTES = 100_000_000
 BUFFER_BYTES = 1024 * 1024
 HEX256 = re.compile(r"[a-f0-9]{64}\Z")
 
@@ -244,7 +244,7 @@ def main() -> int:
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--archive-dir", type=Path)
     parser.add_argument("--part-bytes", type=int, default=PART_BYTES,
-                        help="Raw part size in bytes; default 1000000000, must be below 2 GiB")
+                        help="Raw part size in bytes; default 100000000, must be below 2 GiB")
     parser.add_argument("--verify-assets-only", action="store_true")
     parser.add_argument("--evidence", required=True, type=Path)
     args = parser.parse_args()

@@ -8,6 +8,7 @@ import hashlib
 import math
 import os
 import threading
+import unicodedata
 import uuid
 
 DEFAULTS = {
@@ -15,6 +16,8 @@ DEFAULTS = {
     "download_dir": str(Path.home() / "Videos" / "京东混剪素材"),
     "asr_model_path": "", "asr_device": "cpu",
     "voice_id": "be40aff9ee7b4d0cba3bb35e924d85b2",
+    "voice_provider": "fish", "minimax_model": "speech-2.8-hd",
+    "minimax_voice_id": "male-qn-qingse",
     "deepseek_model": "deepseek-flash",
     "vision_provider": "glm",
     "vision_endpoint": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
@@ -170,7 +173,9 @@ class Settings:
     def _validate(self, key, value):
         enums = {"asr_device": ["cpu", "cuda"], "encoder": ["cpu", "nvenc", "qsv"],
                  "preset": ["fast", "balanced", "quality"], "transition": ["fade", "none"],
-                 "clean_mode": ["none", "blur", "delogo"], "vision_provider": ["glm"]}
+                 "clean_mode": ["none", "blur", "delogo"], "vision_provider": ["glm"],
+                 "voice_provider": ["fish", "minimax"],
+                 "minimax_model": ["speech-2.8-hd", "speech-2.8-turbo"]}
         ranges = {"bgm_gain": (0, 1), "target_seconds": (5, 60), "output_count": (1, 5),
                   "render_concurrency": (1, 3), "width": (240, 1920), "height": (240, 1920),
                   "fps": (15, 60), "transition_seconds": (0, .8), "clean_top_pct": (0, 95),
@@ -190,6 +195,11 @@ class Settings:
         elif key == "caption_plate":
             if type(value) is not bool:
                 raise ValueError("字幕底板必须是开关")
+        elif key == "minimax_voice_id":
+            # Official system and custom voice IDs are not Fish hex identifiers.
+            if (not isinstance(value, str) or not value.strip() or len(value) > 256
+                    or any(unicodedata.category(c) == "Cc" for c in value)):
+                raise ValueError("MiniMax 音色 ID 需要 1–256 个字符，且不含控制字符")
         else:
             if not isinstance(value, str) or len(value) > 2048 or any(c in value for c in "\n\r\0"):
                 raise ValueError("设置文本无效：" + key)
@@ -236,10 +246,11 @@ class Settings:
             try:
                 secrets = self._secrets()
                 result.update(deepseek_key_set=bool(secrets.get("deepseek")), fish_key_set=bool(secrets.get("fish")),
+                              minimax_key_set=bool(secrets.get("minimax")),
                               glm_key_set=bool(secrets.get("glm")), vision_key_set=bool(secrets.get("glm")),
                               credentials_need_reset=False)
             except ValueError:
-                result.update(deepseek_key_set=False, fish_key_set=False, glm_key_set=False, vision_key_set=False,
+                result.update(deepseek_key_set=False, fish_key_set=False, minimax_key_set=False, glm_key_set=False, vision_key_set=False,
                               credentials_need_reset=True)
             return result
 
@@ -289,7 +300,7 @@ class Settings:
             for key, value in patch.items():
                 if key == 'vision_api_key':
                     raise ValueError('请在智谱 GLM API Key 输入框保存新密钥')
-                if key in {"deepseek_api_key", "fish_api_key", "glm_api_key"}:
+                if key in {"deepseek_api_key", "fish_api_key", "minimax_api_key", "glm_api_key"}:
                     if not isinstance(value, str) or len(value) > 4096 or any(c in value for c in "\n\r\0"):
                         raise ValueError("API Key 格式无效")
                     if value.strip():

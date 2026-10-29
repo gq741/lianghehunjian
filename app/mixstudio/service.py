@@ -21,6 +21,8 @@ from .settings import Settings
 from .store import Store
 from .v2 import V2Actions, validate_duration
 from .whole_voice import WholeVoiceActions
+from .speech import (selection as speech_selection, metadata as speech_metadata,
+    synthesize as synthesize_speech, require_retry_selection, require_confirmed_selection)
 from .music_actions import MusicActions
 from .music_library import MusicLibrary
 from .output_names import reserve_output
@@ -743,14 +745,22 @@ class Studio(MusicActions, WholeVoiceActions, V2Actions):
         return desired/rate
 
     @staticmethod
-    def _voice_key(text, voice_id):
-        return hashlib.sha256(json.dumps({"text": text, "voice": voice_id,
-            "provider": "fish", "model": "s2.1-pro", "format": "wav"},
-            ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+    def _voice_key(text, voice_id, *, settings=None):
+        if settings is None or settings.get('voice_provider', 'fish') == 'fish':
+            # The historical two-argument Fish cache identity remains exact.
+            data = {"text":text, "voice":voice_id, "provider":"fish",
+                    "model":"s2.1-pro", "format":"wav"}
+        else:
+            chosen = speech_selection(settings)
+            from . import providers
+            data = {"text":text, "voice":chosen['voice_id'], "provider":chosen['provider'],
+                    "model":chosen['model'], "format":"wav", "endpoint":providers.MINIMAX_URL,
+                    "sample_rate":32000, "language_boost":"Chinese"}
+        return hashlib.sha256(json.dumps(data, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
 
-    def render(self, identifier, allow_paid, *, retry_unknown=False):
+    def render(self, identifier, allow_paid, *, retry_unknown=False, retry_payload=None, expected_voice=None):
         if allow_paid is not True:
-            raise ValueError("请确认本次 Fish 配音调用")
+            raise ValueError("请确认本次配音调用")
         with self.action_lock:
             draft = self.store.draft(identifier)
             if not draft:
@@ -759,7 +769,9 @@ class Studio(MusicActions, WholeVoiceActions, V2Actions):
             # clients. A true legacy draft retains its segmented render contract.
             if (draft.get('production_mode') == 'whole_voice_v1' or
                     draft.get('whole_audio') or draft.get('whole_voice')):
-                return self.produce_whole(identifier, allow_paid, retry_unknown=retry_unknown)
+                return self.produce_whole(identifier, allow_paid, retry_unknown=retry_unknown,
+                    **({"retry_payload":retry_payload} if retry_payload is not None else {}),
+                    **({"expected_voice":expected_voice} if expected_voice is not None else {}))
             v2 = draft.get('workflow') == 'script_first_v2'
             if v2:
                 if self._draft_busy(identifier):
@@ -775,13 +787,18 @@ class Studio(MusicActions, WholeVoiceActions, V2Actions):
                    j["status"] in {"queued", "running", "cancelling"} for j in self.store.active_jobs()):
                 raise ValueError("该文案已有进行中的合成任务")
             settings = self.settings.public()
-            if not self.settings.secret("fish"):
-                raise ValueError("请先在设置中保存 Fish Audio API Key")
+            require_confirmed_selection(expected_voice, settings)
+            if retry_payload is not None:
+                require_retry_selection(retry_payload, settings)
+            voice_binding = speech_metadata(settings)
+            chosen = speech_selection(settings)
+            if not self.settings.secret(chosen['provider']):
+                raise ValueError(f"请先在设置中保存 {chosen['label']} API Key")
             output_dir = self.folder(settings["output_dir"], create=True)
             retry_markers = {}
             if retry_unknown:
                 for segment in draft["segments"]:
-                    key = self._voice_key(segment["text"], settings["voice_id"])
+                    key = self._voice_key(segment["text"], settings["voice_id"], settings=settings)
                     marker = self.root / "voice-cache" / f"{key}.pending.json"
                     if marker.exists():
                         try:
@@ -824,7 +841,7 @@ class Studio(MusicActions, WholeVoiceActions, V2Actions):
                     for i, segment in enumerate(draft["segments"]):
                         _cancel(event)
                         progress(.05 + .45 * i / len(draft["segments"]), f"生成配音 {i + 1}/{len(draft['segments'])}")
-                        key = self._voice_key(segment["text"], settings["voice_id"])
+                        key = self._voice_key(segment["text"], settings["voice_id"], settings=settings)
                         audio = self.root / "voice-cache" / f"{key}.wav"
                         with _slot(self.voice_slots[int(key[:2], 16)], event):
                             if not audio.exists():
@@ -839,8 +856,8 @@ class Studio(MusicActions, WholeVoiceActions, V2Actions):
                                 attempt = {"attempt": uuid.uuid4().hex, "state": "pending"}
                                 marker.write_text(json.dumps(attempt), encoding="utf-8")
                                 try:
-                                    providers.synthesize_voice(segment["text"], temporary, api_key=self.settings.secret("fish"),
-                                                               voice_id=settings["voice_id"], cancel=event)
+                                    synthesize_speech(segment["text"], temporary, settings=settings,
+                                        api_key=self.settings.secret(chosen["provider"]), cancel=event, adapters=providers)
                                     info = media.probe(temporary)
                                     if not .05 <= info["duration"] <= 300:
                                         raise ValueError("配音时长异常")
@@ -973,7 +990,8 @@ class Studio(MusicActions, WholeVoiceActions, V2Actions):
                             with self.render_condition:
                                 self.render_active -= 1
                                 self.render_condition.notify_all()
-            return self.jobs.submit("render", {"draft_id": identifier, "revision": draft["revision"]}, work)
+            return self.jobs.submit("render", {"draft_id": identifier, "revision": draft["revision"],
+                                               "voice":voice_binding}, work)
 
     def retry(self, identifier, allow_paid=False):
         job = self.store.job(identifier)
@@ -1005,12 +1023,13 @@ class Studio(MusicActions, WholeVoiceActions, V2Actions):
         if job["kind"] == "prepare":
             return self.prepare({**p, "allow_paid": allow_paid})
         if job["kind"] == "render":
+            require_retry_selection(p, self.settings.public())
             if p.get("pipeline") == "whole_voice_v1":
                 current = self.store.draft(p['draft_id'])
                 if not current or current['revision'] != p['revision']:
                     raise ValueError('文案或画面选择已修改，请确认当前版本后重新生成；旧缓存保留')
-                return self.produce_whole(p["draft_id"], allow_paid, retry_unknown=True)
-            return self.render(p["draft_id"], allow_paid, retry_unknown=True)
+                return self.produce_whole(p["draft_id"], allow_paid, retry_unknown=True, retry_payload=p)
+            return self.render(p["draft_id"], allow_paid, retry_unknown=True, retry_payload=p)
         raise ValueError("任务类型不支持重试")
 
     def close(self):

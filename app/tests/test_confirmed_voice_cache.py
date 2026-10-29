@@ -170,7 +170,7 @@ class Fixture(WholeVoiceActions, V2Actions):
                  'path': str(self.root / 'fixture.mp4')}]
     def _prepare_assets(self, identifiers, event, progress): return self._v2_assets(identifiers)
     def _unchanged(self, *args): pass
-    def _free_preflight(self, *args): pass
+    def _free_preflight(self, *args, **kwargs): pass
 
 
 def old_draft():

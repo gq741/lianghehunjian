@@ -122,11 +122,13 @@
       "mix-preview": "video",
       "mix-preview-empty": "div",
       "mix-preview-caption": "p",
+      "voice-provider-label": "strong",
       "cleaning-label": "strong",
       "transition-label": "strong",
       "render-draft": "button",
       "render-action-reason": "p",
       "render-all": "button",
+      "render-cost-hint": "p",
       "mix-empty": "div",
       "tasks-title": "h2",
       "task-summary": "span",
@@ -145,9 +147,15 @@
       "deepseek-key-status": "span",
       "set-deepseek_api_key": "input",
       "set-deepseek_model": "input",
+      "set-voice_provider": "select",
+      "voice-provider-hint": "span",
       "fish-key-status": "span",
       "set-fish_api_key": "input",
       "set-voice_id": "input",
+      "minimax-key-status": "span",
+      "set-minimax_api_key": "input",
+      "set-minimax_model": "select",
+      "set-minimax_voice_id": "input",
       "glm-key-status": "span",
       "set-glm_api_key": "input",
       "set-vision_endpoint": "input",
@@ -619,6 +627,14 @@
           "required": null
         }
       },
+      "set-voice_provider": {
+        "tag": "select",
+        "form": "settings-form",
+        "attrs": {
+          "id": "set-voice_provider",
+          "aria-describedby": "voice-provider-hint"
+        }
+      },
       "set-fish_api_key": {
         "tag": "input",
         "form": "settings-form",
@@ -637,6 +653,35 @@
           "id": "set-voice_id",
           "type": "text",
           "placeholder": "be40aff9ee7b4d0cba3bb35e924d85b2",
+          "required": null
+        }
+      },
+      "set-minimax_api_key": {
+        "tag": "input",
+        "form": "settings-form",
+        "attrs": {
+          "id": "set-minimax_api_key",
+          "type": "password",
+          "autocomplete": "new-password",
+          "placeholder": "输入密钥，留空则不变",
+          "spellcheck": "false"
+        }
+      },
+      "set-minimax_model": {
+        "tag": "select",
+        "form": "settings-form",
+        "attrs": {
+          "id": "set-minimax_model"
+        }
+      },
+      "set-minimax_voice_id": {
+        "tag": "input",
+        "form": "settings-form",
+        "attrs": {
+          "id": "set-minimax_voice_id",
+          "type": "text",
+          "maxlength": "256",
+          "placeholder": "male-qn-qingse",
           "required": null
         }
       },
@@ -1249,6 +1294,7 @@
       },
       "mix-preview-empty": {},
       "mix-preview-caption": {},
+      "voice-provider-label": {},
       "cleaning-label": {},
       "transition-label": {},
       "render-draft": {
@@ -1261,6 +1307,7 @@
       "render-all": {
         "hidden": null
       },
+      "render-cost-hint": {},
       "mix-empty": {},
       "tasks-title": {},
       "task-summary": {},
@@ -1288,9 +1335,17 @@
       "deepseek-key-status": {},
       "set-deepseek_api_key": {},
       "set-deepseek_model": {},
+      "set-voice_provider": {
+        "aria-describedby": "voice-provider-hint"
+      },
+      "voice-provider-hint": {},
       "fish-key-status": {},
       "set-fish_api_key": {},
       "set-voice_id": {},
+      "minimax-key-status": {},
+      "set-minimax_api_key": {},
+      "set-minimax_model": {},
+      "set-minimax_voice_id": {},
       "glm-key-status": {},
       "set-glm_api_key": {},
       "set-vision_endpoint": {},
@@ -1382,6 +1437,9 @@
       "set-fps",
       "set-glm_api_key",
       "set-height",
+      "set-minimax_api_key",
+      "set-minimax_model",
+      "set-minimax_voice_id",
       "set-output_count",
       "set-output_dir",
       "set-preset",
@@ -1394,6 +1452,7 @@
       "set-vision_endpoint",
       "set-vision_model",
       "set-voice_id",
+      "set-voice_provider",
       "set-width",
       "target-seconds",
       "transcript-text"

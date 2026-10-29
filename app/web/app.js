@@ -215,7 +215,7 @@
     "subtitle_margin_pct",
   ]);
   const settingKeys = [
-    "output_dir", "download_dir", "asr_model_path", "asr_device", "voice_id", "deepseek_model", "vision_endpoint", "vision_model",
+    "output_dir", "download_dir", "asr_model_path", "asr_device", "voice_id", "voice_provider", "minimax_model", "minimax_voice_id", "deepseek_model", "vision_endpoint", "vision_model",
     "target_seconds", "output_count", "render_concurrency", "encoder",
     "preset", "width", "height", "fps", "transition", "transition_seconds", "clean_mode",
     "clean_top_pct", "clean_height_pct", "caption_plate", "subtitle_font_size", "subtitle_margin_pct",
@@ -223,6 +223,7 @@
   const defaultSettings = {
     output_dir: "", download_dir: "", asr_model_path: "", asr_device: "cpu",
     voice_id: "be40aff9ee7b4d0cba3bb35e924d85b2", deepseek_model: "deepseek-flash",
+    voice_provider: "fish", minimax_model: "speech-2.8-hd", minimax_voice_id: "male-qn-qingse",
     bgm_path: "", bgm_gain: 0.15, target_seconds: 25, output_count: 1, render_concurrency: 1,
     encoder: "cpu", preset: "balanced", width: 720, height: 1280, fps: 30,
     transition: "fade", transition_seconds: 0.2, clean_mode: "none",
@@ -230,6 +231,18 @@
     subtitle_font_size: 42, subtitle_margin_pct: 12,
     vision_endpoint: "https://open.bigmodel.cn/api/paas/v4/chat/completions", vision_model: "glm-5.3-flash",
   };
+
+  // Production always uses saved settings; changing the selector never submits work.
+  function voiceProvider() { return state.settings.voice_provider === "minimax" ? "minimax" : "fish"; }
+  function voiceProviderName(short = false) { return voiceProvider() === "minimax" ? "MiniMax" : short ? "Fish" : "Fish Audio"; }
+  function syncVoiceProviderFields() {
+    const provider = $("set-voice_provider").value;
+    document.querySelectorAll("[data-voice-provider]").forEach((field) => {
+      field.hidden = field.getAttribute("data-voice-provider") !== provider;
+      field.querySelectorAll("input").forEach(input => { input.disabled = field.hidden; });
+      field.querySelectorAll("select").forEach(input => { input.disabled = field.hidden; });
+    });
+  }
 
   function element(tag, className, text) {
     const node = document.createElement(tag);
@@ -730,7 +743,7 @@
       durationBounds(targetSeconds);
       if (!Number.isInteger(count) || count < 1 || count > 5) throw new Error("生成数量请填写 1～5 的整数。");
       const accepted = await confirmAction("生成口播文案？",
-        `根据“${state.product.title}”生成 ${count} 条文案，参考时长 ${targetSeconds} 秒，成片按实测配音与镜头校准，最长 60 秒。\n\n本次只调用 DeepSeek，可能产生接口费用；不会自动转写、识别画面或调用 Fish 配音。`,
+        `根据“${state.product.title}”生成 ${count} 条文案，参考时长 ${targetSeconds} 秒，成片按实测配音与镜头校准，最长 60 秒。\n\n本次只调用 DeepSeek，可能产生接口费用；不会自动转写、识别画面或调用 ${voiceProviderName(true)} 配音。`,
         "确认调用 DeepSeek");
       if (!accepted) return;
       await api("/api/v2/generate", "POST", { asset_ids: [...state.selected], target_seconds: targetSeconds, count, voice_first: true, allow_paid: true });
@@ -1013,7 +1026,7 @@
     if (!canMatchDraft(draft)) throw new Error(`请先完善文案并保存。${narrationTiming(draft).message}`);
     if (!state.settings.glm_key_set || !state.settings.deepseek_key_set) { setPage("settings"); (!state.settings.glm_key_set ? $("set-glm_api_key") : $("set-deepseek_api_key")).focus(); throw new Error("请先在设置中保存 GLM 视觉识别及 DeepSeek 密钥。"); }
     const budgetNotice = await matchingBudgetNotice([draft]);
-    const accepted = await confirmAction("分析素材并匹配画面？", `将未分析素材的关键帧发送至视觉模型，分类后按文案自动匹配画面；部分批次失败时，已保存结果仍可参与匹配。${visionCostNotice}\n\n${budgetNotice}\n\n可能产生接口费用，本次不调用 Fish 配音。预览与手动替换为可选操作。`, "确认分析与匹配费用");
+    const accepted = await confirmAction("分析素材并匹配画面？", `将未分析素材的关键帧发送至视觉模型，分类后按文案自动匹配画面；部分批次失败时，已保存结果仍可参与匹配。${visionCostNotice}\n\n${budgetNotice}\n\n可能产生接口费用，本次不调用 ${voiceProviderName(true)} 配音。预览与手动替换为可选操作。`, "确认分析与匹配费用");
     if (!accepted) return;
     await api(`/api/v2/drafts/${encodeURIComponent(draft.id)}/match`, "POST", { allow_paid: true });
     toast("画面分析与匹配已提交，可在下方查看进度。"); await refresh();
@@ -1037,19 +1050,27 @@
     if (state.draftDirty || state.matchesDirty) throw new Error("请先保存文案和画面选择，再生成视频。");
     if (drafts.some((draft) => isV2Draft(draft) && !narrationTiming(draft).ready)) throw new Error("本组有空白或无效文案，请先完善并保存。");
     if (drafts.some((draft) => !canRenderDraft(draft))) throw new Error("请先为每条文案匹配完整画面，并预览核对。");
-    if (!state.settings.fish_key_set) { setPage("settings"); $("set-fish_api_key").focus(); throw new Error("请先保存 Fish Audio API Key。"); }
+    const provider = voiceProvider();
+    if ($("set-voice_provider").value !== provider) { setPage("settings"); $("save-settings").focus(); throw new Error("配音服务已更改，请先保存设置，再确认生成视频。"); }
+    if (!state.settings[`${provider}_key_set`]) { setPage("settings"); $(`set-${provider}_api_key`).focus(); throw new Error(`请先保存 ${voiceProviderName()} API Key。`); }
     if (!drafts.length) throw new Error("请先生成并确认文案。");
+    // Keep the shown paid consent and its request on the same saved voice snapshot.
+    const voice = provider === "minimax"
+      ? { provider, model: state.settings.minimax_model || defaultSettings.minimax_model, voice_id: state.settings.minimax_voice_id || defaultSettings.minimax_voice_id }
+      : { provider, model: "s2.1-pro", voice_id: state.settings.voice_id || defaultSettings.voice_id };
+    const voiceName = provider === "minimax" ? "MiniMax" : "Fish Audio";
+    const shortVoiceName = provider === "minimax" ? "MiniMax" : "Fish";
     const budgetNotice = await matchingBudgetNotice(drafts, "produce");
     const migrationNotice = drafts.some(isWholeVoiceUpgrade) ? `\n\n${wholeVoiceUpgradeNotice}` : "";
     const longCopyNotice = drafts.some(draft => usesWholeVoice(draft) && !draft.whole_audio && !draft.whole_voice && narrationTiming(draft).estimated > 60) ? "\n\n文案字数只作估算，真实配音可能超过 60 秒交付上限；不会自动截断或重新购买配音。建议先精简文案，再决定是否付费生成。" : "";
     const accepted = await confirmAction("确认文案并生成视频？",
-      `先免费预检，然后为 ${drafts.length} 条文案各生成一整条 Fish 配音，按实测语音分析、匹配画面并导出。\n\n这会产生 Fish Audio 配音、GLM 画面识别和 DeepSeek 匹配费用。${visionCostNotice}\n\n${budgetNotice}\n\n请确认文案与音色。成功缓存会复用。参考时长仅作参考，成片按实测配音与镜头校准，最长 60 秒。画面偏长自动裁短，偏短时可适度慢放；必要时使用允许的复用额度和自然语速整条配音，不为了凑参考时长加速口播。确有相关画面不足或超过 60 秒上限时会保留缓存，不自动追加配音。若接口结果不确定，不会自动重复提交收费请求。${migrationNotice}${longCopyNotice}`,
+      `先免费预检，然后为 ${drafts.length} 条文案各生成一整条 ${shortVoiceName} 配音，按实测语音分析、匹配画面并导出。\n\n这会产生 ${voiceName} 配音、GLM 画面识别和 DeepSeek 匹配费用。${visionCostNotice}\n\n${budgetNotice}\n\n请确认文案与音色。成功缓存会复用。参考时长仅作参考，成片按实测配音与镜头校准，最长 60 秒。画面偏长自动裁短，偏短时可适度慢放；必要时使用允许的复用额度和自然语速整条配音，不为了凑参考时长加速口播。确有相关画面不足或超过 60 秒上限时会保留缓存，不自动追加配音。若接口结果不确定，不会自动重复提交收费请求。${migrationNotice}${longCopyNotice}`,
       `确认生成 ${drafts.length} 条`);
     if (!accepted) return;
     let submitted = 0;
     try {
       for (const draft of drafts) {
-        await api(usesWholeVoice(draft) ? `/api/v2/drafts/${encodeURIComponent(draft.id)}/produce` : `/api/drafts/${encodeURIComponent(draft.id)}/render`, "POST", { allow_paid: true });
+        await api(usesWholeVoice(draft) ? `/api/v2/drafts/${encodeURIComponent(draft.id)}/produce` : `/api/drafts/${encodeURIComponent(draft.id)}/render`, "POST", { allow_paid: true, voice });
         submitted++;
       }
       toast(`${submitted} 条视频任务已提交。`);
@@ -1079,7 +1100,7 @@
   async function retryJob(job) {
     const paid = ["prepare", "script", "match", "render"].includes(job.kind);
     const accepted = await confirmAction(paid ? "确认重新提交任务？" : "重试任务？",
-      paid ? `这将重新执行${{ render: "整条配音、画面分析匹配及合成（成功缓存复用）", prepare: "历史转写与 DeepSeek 改写", script: "DeepSeek 文案生成", match: "视觉分析与 DeepSeek 匹配" }[job.kind]}，可能再次产生接口费用。${job.kind === "match" ? `${visionCostNotice}本次不调用 Fish 配音。` : ""}若上次请求结果不确定，请先核对服务端状态再重试。` : "将重新提交这个任务，已有原素材保持不变。",
+      paid ? `这将重新执行${{ render: `整条 ${voiceProviderName()} 配音、画面分析匹配及合成（成功缓存复用）`, prepare: "历史转写与 DeepSeek 改写", script: "DeepSeek 文案生成", match: "视觉分析与 DeepSeek 匹配" }[job.kind]}，可能再次产生接口费用。${job.kind === "match" ? `${visionCostNotice}本次不调用 ${voiceProviderName(true)} 配音。` : ""}若上次请求结果不确定，请先核对服务端状态再重试。` : "将重新提交这个任务，已有原素材保持不变。",
       paid ? "确认重试及可能的费用" : "重试");
     if (!accepted) return;
     const draft = state.drafts.find(item => item.id === job.draft_id);
@@ -1199,6 +1220,7 @@
       if (key === "caption_plate") $(`set-${key}`).checked = Boolean(values[key]);
       else $(`set-${key}`).value = values[key] ?? "";
     });
+    syncVoiceProviderFields();
     $("settings-status").textContent = "设置已与本机同步";
   }
   function renderEnvironment() {
@@ -1218,11 +1240,13 @@
     if (Array.isArray(state.environment.notes) && state.environment.notes.length) {
       $("environment-status").append(element("p", "field-hint", state.environment.notes.join("；")));
     }
-    for (const name of ["deepseek", "fish", "glm"]) {
+    for (const name of ["deepseek", "fish", "minimax", "glm"]) {
       const configured = Boolean(state.settings[`${name}_key_set`]);
       $(`${name}-key-status`).textContent = configured ? "已保存" : "未配置";
       $(`${name}-key-status`).classList.toggle("configured", configured);
     }
+    $("voice-provider-label").textContent = voiceProviderName();
+    $("render-cost-hint").textContent = `确认后先免费预检，再生成整条配音、自动匹配画面并导出。会确认 ${voiceProviderName()}、GLM 和 DeepSeek 的可能费用，成功缓存复用；不保留素材原始口播。`;
     $("cleaning-label").textContent = { none: "不处理原字幕", blur: "区域模糊", delogo: "区域修补" }[state.settings.clean_mode] || "不处理原字幕";
     $("transition-label").textContent = state.settings.transition === "none" ? "直切" : `轻柔淡化 ${state.settings.transition_seconds ?? 0.2}s`;
   }
@@ -1232,6 +1256,7 @@
   }
   $("settings-form").addEventListener("input", markSettingsEdited);
   $("settings-form").addEventListener("change", markSettingsEdited);
+  $("set-voice_provider").addEventListener("change", () => { syncVoiceProviderFields(); markSettingsEdited(); });
   document.querySelectorAll(".choose-setting-folder").forEach((button) => button.addEventListener("click", () => withBusy(button, () => nativePath("choose_folder", button.dataset.for))));
   function musicImportRunning() {
     const ownJob = state.jobs.find(job => job.id === state.musicImportId);
@@ -1445,7 +1470,7 @@
         if (numericSettings.has(key) && !String(input.value).trim()) throw new Error("数字设置不能为空，请填写后再保存。");
         body[key] = key === "caption_plate" ? input.checked : numericSettings.has(key) ? Number(input.value) : input.value.trim();
       });
-      for (const key of ["deepseek_api_key", "fish_api_key", "glm_api_key"]) {
+      for (const key of ["deepseek_api_key", "fish_api_key", "minimax_api_key", "glm_api_key"]) {
         const value = $(`set-${key}`).value.trim();
         if (value) body[key] = value;
       }
@@ -1453,6 +1478,7 @@
       if (state.settingsEditorVersion === submittedSettingsVersion) {
         $("set-deepseek_api_key").value = "";
         $("set-fish_api_key").value = "";
+        $("set-minimax_api_key").value = "";
         $("set-glm_api_key").value = "";
         state.settingsDirty = false;
       }
@@ -1465,7 +1491,7 @@
     if (state.busy.has($("save-settings"))) throw new Error("设置正在保存，请完成后再重建凭据。");
     syncButtons();
     const accepted = await confirmAction("重建本机凭据？",
-      "程序将备份旧加密凭据文件，并重建空凭据。原来保存的服务密钥将重置，需要重新输入 DeepSeek、Fish Audio 和 GLM 密钥。其他设置不变，页面上已填但未保存的内容会保留。本操作不会调用模型。",
+      "程序将备份旧加密凭据文件，并重建空凭据。原来保存的服务密钥将重置，需要重新输入 DeepSeek、Fish Audio、MiniMax 和 GLM 密钥。其他设置不变，页面上已填但未保存的内容会保留。本操作不会调用模型。",
       "备份并重建空凭据");
     if (!accepted) return;
     state.settings = await api("/api/settings/reset-credentials", "POST", { confirm: true });

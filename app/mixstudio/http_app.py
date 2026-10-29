@@ -222,7 +222,11 @@ def create_app(studio, web_root=None, token=None):
 
     @app.post('/api/v2/drafts/<identifier>/produce')
     def produce_whole(identifier):
-        return ok(studio.produce_whole(identifier, body().get('allow_paid')))
+        data = body()
+        if 'voice' in data and not isinstance(data['voice'], dict):
+            raise ValueError('配音确认信息格式无效，请刷新后重新确认')
+        return ok(studio.produce_whole(identifier, data.get('allow_paid'),
+            **({'expected_voice':data['voice']} if 'voice' in data else {})))
 
     @app.post('/api/v2/drafts/<identifier>/realign')
     def realign_whole(identifier):
@@ -270,7 +274,11 @@ def create_app(studio, web_root=None, token=None):
 
     @app.post("/api/drafts/<identifier>/render")
     def render(identifier):
-        return ok(studio.render(identifier, body().get("allow_paid")))
+        data = body()
+        if "voice" in data and not isinstance(data["voice"], dict):
+            raise ValueError("配音确认信息格式无效，请刷新后重新确认")
+        return ok(studio.render(identifier, data.get("allow_paid"),
+            **({"expected_voice":data["voice"]} if "voice" in data else {})))
 
     @app.post("/api/assets/<identifier>/transcript")
     def transcript(identifier):
