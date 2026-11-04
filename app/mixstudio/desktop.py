@@ -80,6 +80,24 @@ def _read_clipboard_windows(*, user32=None, kernel32=None):
 class DialogBridge:
     def __init__(self):
         self._window = None
+        self._studio = None
+        self._updates = None
+
+    def install_update(self):
+        if not self._studio or not self._updates:
+            return {'ok': False, 'error': '请通过文件夹版桌面程序更新'}
+        with self._studio.action_lock:
+            if self._studio.store.active_jobs() or self._studio.storage_cleaning:
+                return {'ok': False, 'error': '请等待当前任务和存储清理结束，再退出更新'}
+            self._studio.update_pending = True
+            try:
+                self._updates.launch()
+            except Exception as error:
+                self._studio.update_pending = False
+                return {'ok': False, 'error': str(error) if isinstance(error, ValueError) else '更新程序启动失败，请重试'}
+        # The helper waits for this process to exit; it never kills working jobs.
+        self._window.destroy()
+        return {'ok': True}
 
     def choose_folder(self):
         import webview
@@ -126,6 +144,8 @@ def main(argv=None):
             product_reader = JDWindowReader()
             studio.product_reader = product_reader
             bridge = DialogBridge()
+            bridge._studio = studio
+            bridge._updates = app.config['UPDATES']
             bridge._window = webview.create_window("量禾混剪", address,
                 js_api=bridge, width=1380, height=900, min_size=(1024, 700),
                 background_color="#f5f7f8", text_select=True)

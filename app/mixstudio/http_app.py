@@ -38,6 +38,8 @@ def create_app(studio, web_root=None, token=None):
     token = token or secrets.token_urlsafe(32)
     app.config["LOCAL_TOKEN"] = token
     app.config["STUDIO"] = studio
+    from .updates import UpdateSession
+    app.config['UPDATES'] = UpdateSession()
     # Cache a verified digest, never trust the URL key in place of verification.
     # This cache includes file identity/ChangeTime, so changed bytes invalidate it.
     from .media_identity import MediaIdentityCache
@@ -71,9 +73,11 @@ def create_app(studio, web_root=None, token=None):
                 if lock is not None:
                     lock.acquire()
                     g.studio_action_lock = lock
+                    if getattr(studio, 'update_pending', False):
+                        return jsonify(ok=False, error='程序即将退出并更新，请等待更新完成'), 409
                     if getattr(studio, 'storage_cleaning', False):
                         return jsonify(ok=False, error='存储清理正在进行，请完成后再提交操作'), 409
-                    if request.method == 'POST' and request.path == '/api/music/scan':
+                    if request.method == 'POST' and request.path in {'/api/music/scan', '/api/updates/check', '/api/updates/prepare'}:
                         # Scanning only reads an external folder and registers
                         # in-memory candidates under the music library's lock.
                         # Do not hold all unrelated mutations during that walk.
@@ -188,6 +192,20 @@ def create_app(studio, web_root=None, token=None):
     @app.get("/api/settings")
     def settings_get():
         return ok(studio.settings.public())
+
+    @app.get('/api/updates')
+    def update_status():
+        return ok(app.config['UPDATES'].status())
+
+    @app.post('/api/updates/check')
+    def update_check():
+        return ok(app.config['UPDATES'].check())
+
+    @app.post('/api/updates/prepare')
+    def update_prepare():
+        if body().get('confirmed') is not True:
+            raise ValueError('请确认下载更新包')
+        return ok(app.config['UPDATES'].prepare())
 
     @app.put("/api/settings")
     def settings_put():

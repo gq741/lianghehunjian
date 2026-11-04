@@ -11,6 +11,18 @@ from .jobs import Cancelled
 from .product import normalize_jd_link, validate_product
 
 
+def reusable_matching(draft):
+    """Visual analysis alone is not a completed semantic match.
+
+    Editing copy or invalidating old scene IDs clears candidates and marks the
+    match pending. A completed empty/manual selection stays authoritative.
+    """
+    candidates = draft.get('match_candidates')
+    return bool(draft.get('clips') and candidates is not None
+                and draft.get('analysis_summary', {}).get('complete') is True
+                and not (draft.get('match_status') == 'pending' and not candidates))
+
+
 @contextmanager
 def visual_slot(semaphore, event):
     while not semaphore.acquire(timeout=.2):

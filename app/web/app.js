@@ -1500,6 +1500,34 @@
     toast("旧加密凭据已备份，空凭据已重建。请填写并保存各服务密钥；当前未保存输入已保留。");
     await refresh();
   }));
+  $("check-update").addEventListener("click", () => withBusy($("check-update"), async () => {
+    $("download-update").hidden = true; $("install-update").hidden = true;
+    $("update-status").textContent = "正在检查更新…";
+    try {
+      const info = await api("/api/updates/check", "POST", {});
+      $("update-status").textContent = `当前 ${info.version}。${info.available ? `发现 ${info.latest}：` : ""}${info.message}${!info.portable ? "；开发版请使用源码更新。" : ""}`;
+      $("download-update").hidden = !info.compatible;
+    } catch (error) { $("update-status").textContent = error.message; throw error; }
+  }));
+  $("download-update").addEventListener("click", () => withBusy($("download-update"), async () => {
+    $("check-update").disabled = true;
+    $("update-status").textContent = "正在下载并校验更新包；原程序仍可使用…";
+    try {
+      const result = await api("/api/updates/prepare", "POST", { confirmed: true });
+      $("update-status").textContent = `${result.version} 已下载并校验。保存修改、结束任务后，点击“退出并安装更新”。`;
+      $("install-update").hidden = false; $("download-update").hidden = true;
+    } catch (error) { $("update-status").textContent = error.message; throw error; }
+    finally { $("check-update").disabled = false; }
+  }));
+  $("install-update").addEventListener("click", () => withBusy($("install-update"), async () => {
+    const dirty = () => state.settingsDirty || state.draftDirty || state.matchesDirty || state.musicGainDirty;
+    if (dirty()) throw new Error("请先保存设置、文案、画面选择和音乐音量的修改。");
+    if (!window.pywebview?.api?.install_update) throw new Error("请在桌面程序中安装更新。");
+    if (!await confirmAction("退出并安装更新？", "程序将退出，备份旧程序并安装已校验的更新，随后运行免费自检。个人数据和密钥保留，不调用收费模型。完成后请重新打开软件。", "退出并安装")) return;
+    if (dirty()) throw new Error("仍有未保存修改，请先保存再更新。");
+    const result = await window.pywebview.api.install_update();
+    if (!result.ok) throw new Error(result.error);
+  }));
   function formatBytes(value) {
     const bytes = Math.max(0, Number(value) || 0);
     return bytes >= 1024 ** 3 ? `${(bytes / 1024 ** 3).toFixed(2)} GB` : `${(bytes / 1024 ** 2).toFixed(1)} MB`;

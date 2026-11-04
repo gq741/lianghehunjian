@@ -58,6 +58,9 @@ def main(argv=None):
     args = parser.parse_args(argv)
     helpers = _helpers()
     root = helpers.configure_environment(helpers.package_root())
+    if (root / '.lianghe-update.json').exists():
+        _notice('程序更新尚未完成，请重新运行更新包入口完成恢复后再启动。', args.headless)
+        return 1
     logger = logging.getLogger('lianghe.portable')
     try:
         if not helpers.supported_platform():

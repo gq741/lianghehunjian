@@ -18,8 +18,8 @@ class Store:
                 CREATE TABLE IF NOT EXISTS drafts(id TEXT PRIMARY KEY, data TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS jobs(id TEXT PRIMARY KEY, data TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS meta(id TEXT PRIMARY KEY, data TEXT NOT NULL);
-                CREATE INDEX IF NOT EXISTS jobs_recent_group ON jobs(
-                    (json_extract(data,'$.kind') IN ('scan','download')),
+                CREATE INDEX IF NOT EXISTS jobs_recent_group_v2 ON jobs(
+                    (json_extract(data,'$.kind') IN ('scan','download','music_import')),
                     json_extract(data,'$.created_at') DESC);
                 CREATE INDEX IF NOT EXISTS jobs_active_state ON jobs(json_extract(data,'$.status'));
                 CREATE INDEX IF NOT EXISTS drafts_recent ON drafts(json_extract(data,'$.created_at') DESC);

@@ -1,6 +1,7 @@
 """Workbench music controls; owned local copies, no provider requests."""
 from pathlib import Path
 import math
+import os
 import sqlite3
 
 from .music_library import _digest
@@ -13,8 +14,9 @@ class MusicActions:
         current = None
         if path:
             source = Path(path)
+            owned = Path(os.path.abspath(path)).parent == self.music_library.root
             current = {'id':None, 'name':source.name, 'path':str(source),
-                       'available':source.is_file(), 'managed':False}
+                       'available':source.is_file(), 'managed':owned}
         error = ''
         try:
             rows = self.music_library.list_tracks() if include_tracks else []
@@ -28,9 +30,14 @@ class MusicActions:
                 if current['available'] and self._media_identity_cache.signature(Path(path), _digest) != row['id']:
                     current['available'] = False
                     error = '已选择的音乐库副本被修改，请重新导入或主动关闭音乐；不会自动换歌'
+            elif current and current['managed']:
+                current['available'] = False
+                error = '已选择的音乐库副本缺少有效清单登记，请重新导入或主动关闭音乐；不会自动换歌'
         except (OSError, ValueError) as exc:
             rows = []
             error = str(exc)[:300] or '音乐库读取失败，请检查本地文件'
+            if current and current['managed']:
+                current['available'] = False
         if current and not current['available'] and not error:
             error = '已选择的背景音乐文件不存在，请重新导入并选择，或主动选择不加音乐；不会自动换歌'
         value = {'current':current, 'gain':settings['bgm_gain'], 'error':error}

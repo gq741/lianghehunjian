@@ -19,7 +19,7 @@ from .media_identity import MediaIdentityCache
 from .instance import DataDirectoryLock
 from .settings import Settings
 from .store import Store
-from .v2 import V2Actions, validate_duration
+from .v2 import V2Actions, validate_duration, reusable_matching
 from .whole_voice import WholeVoiceActions
 from .speech import (selection as speech_selection, metadata as speech_metadata,
     synthesize as synthesize_speech, require_retry_selection, require_confirmed_selection)
@@ -229,8 +229,7 @@ class Studio(MusicActions, WholeVoiceActions, V2Actions):
         assets = self._v2_assets(draft['asset_ids'])
         if operation not in {'match', 'produce'}:
             raise ValueError('匹配预算操作无效')
-        if (operation == 'produce' and draft.get('clips') and draft.get('match_candidates') is not None
-                and draft.get('analysis_summary', {}).get('complete') is True):
+        if operation == 'produce' and reusable_matching(draft):
             return {'exact': True, 'available_scene_count': sum(c.get('usable') is True for c in draft['clips']),
                     'new_request_count': 0, 'cached_request_count': 0,
                     'message': '本次直接复用已保存的画面匹配，不追加 GLM 或 DeepSeek 匹配调用。'}

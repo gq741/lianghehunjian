@@ -23,7 +23,7 @@ from .jobs import Cancelled
 from .speech import (selection as speech_selection, validate as validate_speech,
     metadata as speech_metadata, recorded_settings, synthesize as synthesize_speech,
     require_retry_selection, require_confirmed_selection)
-from .v2 import require_script_timing, validate_duration
+from .v2 import require_script_timing, validate_duration, reusable_matching
 from .voice_timing import align_segments
 from .output_names import output_directory, reserve_output
 
@@ -508,14 +508,16 @@ class WholeVoiceActions:
                     current['whole_voice'] = {**timing,'path':str(audio),'sha256':signature,'key':key,
                         'duration':duration, **voice_binding}
                     current['production_mode'] = 'whole_voice_v1'
+                    # Capture semantic readiness before clearing timing-only
+                    # views; deliberate empty selections must not be refilled.
+                    reuse_matching = reusable_matching(current)
                     # The old plan references previous sentence timings. Clear
                     # both views in the same commit, including a later cancel.
                     current.update(timeline_plan=None, whole_timeline_plan=None,
-                                   match_status='pending')
+                        match_status='needs_review' if reuse_matching and not current.get('match_candidates') else 'pending')
                     self.store.put_draft(current)
                 _cancel(event)
-                if not (current.get('clips') and current.get('match_candidates') is not None
-                        and current.get('analysis_summary', {}).get('complete') is True):
+                if not reuse_matching:
                     progress(.3, '画面分析与匹配 · 使用真实音频时间轴')
                     self._match_operation(current,settings)(event,lambda v,m:progress(.3+.45*v,m))
                 current = self._v2_draft(identifier)

@@ -187,6 +187,11 @@
       "storage-include-caches": "input",
       "refresh-storage": "button",
       "clean-storage": "button",
+      "update-title": "h2",
+      "update-status": "p",
+      "check-update": "button",
+      "download-update": "button",
+      "install-update": "button",
       "settings-status": "span",
       "save-settings": "button",
       "toast-region": "div",
@@ -923,6 +928,32 @@
           "type": "button"
         }
       },
+      "check-update": {
+        "tag": "button",
+        "form": "settings-form",
+        "attrs": {
+          "id": "check-update",
+          "type": "button"
+        }
+      },
+      "download-update": {
+        "tag": "button",
+        "form": "settings-form",
+        "attrs": {
+          "id": "download-update",
+          "type": "button",
+          "hidden": null
+        }
+      },
+      "install-update": {
+        "tag": "button",
+        "form": "settings-form",
+        "attrs": {
+          "id": "install-update",
+          "type": "button",
+          "hidden": null
+        }
+      },
       "save-settings": {
         "tag": "button",
         "form": "settings-form",
@@ -1379,6 +1410,17 @@
       "storage-include-caches": {},
       "refresh-storage": {},
       "clean-storage": {},
+      "update-title": {},
+      "update-status": {
+        "role": "status"
+      },
+      "check-update": {},
+      "download-update": {
+        "hidden": null
+      },
+      "install-update": {
+        "hidden": null
+      },
       "settings-status": {},
       "save-settings": {},
       "toast-region": {
