@@ -1,0 +1,254 @@
+{
+  "format": 1,
+  "mode": "workbuddy-source",
+  "root": "app",
+  "code_commit": "39296d7ef18b7b97d4080ecfb2c2f42232e7989d",
+  "files": [
+    {
+      "path": "app.py",
+      "bytes": 569,
+      "sha256": "d01a01131cf772fb6f8f8016233364e052bacccef193a514ab22ac35da114e79"
+    },
+    {
+      "path": "mixstudio/__init__.py",
+      "bytes": 71,
+      "sha256": "c00e9dd209fdb396b1b6a858509829307ba9a6e93c1240a76ff0dda20d441aac"
+    },
+    {
+      "path": "mixstudio/asr_worker.py",
+      "bytes": 2600,
+      "sha256": "8fffbea945db81e310e2b1f5c6e97d67e4ee373d47f3652fd7caaed8319972fc"
+    },
+    {
+      "path": "mixstudio/desktop.py",
+      "bytes": 7201,
+      "sha256": "03298efa47e51eb61210ee9143d027a8d8f6d24039a70530e6d6c974c3f8ce23"
+    },
+    {
+      "path": "mixstudio/diagnostics.py",
+      "bytes": 6461,
+      "sha256": "2de78bc50a635fcc3d245867768507b94d9e07cbf50371d1d24c2c6ec25a2e63"
+    },
+    {
+      "path": "mixstudio/draft_history.py",
+      "bytes": 2904,
+      "sha256": "a63f8be34379b73fd2b61a0892cd553f4b9187e89b35e77f5a452489ee898265"
+    },
+    {
+      "path": "mixstudio/http_app.py",
+      "bytes": 14955,
+      "sha256": "9d71ba0523769967319833cd51de692275f1db336389d1cca5e968932c086cac"
+    },
+    {
+      "path": "mixstudio/instance.py",
+      "bytes": 3314,
+      "sha256": "fa0527386a8f3279bffd1608c0dcaa27eb93eafd331f4c905d4a3def32cd5d58"
+    },
+    {
+      "path": "mixstudio/jobs.py",
+      "bytes": 7377,
+      "sha256": "6b7ff4e98cc82172d4f39c6d402a3e2d3086ddc2f9f7e15b256f10f5ed77ddec"
+    },
+    {
+      "path": "mixstudio/media.py",
+      "bytes": 48638,
+      "sha256": "eafcfdf8408c20ea177e62ebd5515e4c5d2d930c49012ac3aa6587a8655dd2c5"
+    },
+    {
+      "path": "mixstudio/media_identity.py",
+      "bytes": 3578,
+      "sha256": "51cf162394e7a1bba9cae1fd39cb056576c7174d8b5426f8cb3ebae4f6e58477"
+    },
+    {
+      "path": "mixstudio/music_actions.py",
+      "bytes": 8119,
+      "sha256": "7ceed9814ccf44987e7baf3493c80c893c94ba14ffa053c48bdd51b2ef673061"
+    },
+    {
+      "path": "mixstudio/music_library.py",
+      "bytes": 15445,
+      "sha256": "125b0d4af32e0a9b9ec74697b9694301302df5b02398e32ec674147b7f98c212"
+    },
+    {
+      "path": "mixstudio/output_names.py",
+      "bytes": 2044,
+      "sha256": "e5e2843cc17c12df27c37cfb757b1937671b84035afc60c8c66bd3cee67d14f6"
+    },
+    {
+      "path": "mixstudio/preprocess.py",
+      "bytes": 9212,
+      "sha256": "e2f7abd35dd483107e903962f3a9aeca0f3f939dabdc67e877d3d09c7ec6a9ea"
+    },
+    {
+      "path": "mixstudio/product.py",
+      "bytes": 13552,
+      "sha256": "8f46499346d3ae62e69aedd84d0099fa6b301f162cdd0ae208c30ec19ba726b8"
+    },
+    {
+      "path": "mixstudio/providers.py",
+      "bytes": 72482,
+      "sha256": "517d29e30e842df8138f7fd736bd9f17d9e00125a65751e3b0c6e1e9e8e6a27f"
+    },
+    {
+      "path": "mixstudio/recycle.py",
+      "bytes": 3949,
+      "sha256": "628de9f227e0093502f50af552c718ff0325d0332e0ca115a26c01fa96f725df"
+    },
+    {
+      "path": "mixstudio/script_engine.py",
+      "bytes": 40968,
+      "sha256": "b1ab997a94c96d583c9e83cefc54f5f498ec416bf742080f58c8408d727a6e8f"
+    },
+    {
+      "path": "mixstudio/semantic_cache.py",
+      "bytes": 6430,
+      "sha256": "d9a0dda007340a641e7a3ead4bbe6d8254043574c30f49b5d200c5d46ba365e8"
+    },
+    {
+      "path": "mixstudio/service.py",
+      "bytes": 60806,
+      "sha256": "6096be7a935d131482a3b8d17f952a4c1b300feb22bc8d02274d502299b14494"
+    },
+    {
+      "path": "mixstudio/settings.py",
+      "bytes": 16806,
+      "sha256": "9206b2ec5cc5a5e806748eb47a31ffaaf69dea4e20b06f093add9b5416902493"
+    },
+    {
+      "path": "mixstudio/speech.py",
+      "bytes": 3959,
+      "sha256": "2306d182f7d3481cadaf734068ddf2f4e3a945d8337b9aab0fcea95f298313a8"
+    },
+    {
+      "path": "mixstudio/storage.py",
+      "bytes": 12492,
+      "sha256": "c358e4536198a47e2e0a56de25d671b993feb3754ad06be6f9cc50c3f7e34b1c"
+    },
+    {
+      "path": "mixstudio/store.py",
+      "bytes": 13117,
+      "sha256": "124efaf5662996d3d94a3ee990d20bb6ecd3cfcea8e00036b469ab495b76fd00"
+    },
+    {
+      "path": "mixstudio/subtitle_regions.py",
+      "bytes": 10570,
+      "sha256": "31d47bb6f159921860031e69d468869bdb56145b94ffd43536f9946494aacd09"
+    },
+    {
+      "path": "mixstudio/subtitle_worker.py",
+      "bytes": 1422,
+      "sha256": "d1e24e8d7946361e0e0e7f42fb7927bc6c0424150f6fa713773da72584a884ab"
+    },
+    {
+      "path": "mixstudio/tasklog.py",
+      "bytes": 3579,
+      "sha256": "f4d9efd386ee0ae3aa418c534175e372dc561a0260a59a67e395cfd74a64b4f7"
+    },
+    {
+      "path": "mixstudio/timeline.py",
+      "bytes": 16194,
+      "sha256": "df57b8db223ad4b3e239a804bfd3b769fd8f05ae5dceb750c19ffd96d38cee81"
+    },
+    {
+      "path": "mixstudio/updates.py",
+      "bytes": 9283,
+      "sha256": "dd38cfdb1f8d2e8c3f3258751b0bdeeb4ae0715b8817ebb600c8fd7d4fa11969"
+    },
+    {
+      "path": "mixstudio/v2.py",
+      "bytes": 28267,
+      "sha256": "15c4e85031928979eb36ea6856f072b4ede0329dc5de93559b76714229733a35"
+    },
+    {
+      "path": "mixstudio/vision.py",
+      "bytes": 61627,
+      "sha256": "137100f4c97ff66ec01d6d8d1b0c32588569aebdf879b3e2120496538c9071c5"
+    },
+    {
+      "path": "mixstudio/voice_alignment_worker.py",
+      "bytes": 1999,
+      "sha256": "cd35f40b108420aac81451b5c0d5ac8e0a9211ea9b4159b19650f4a7b608e3a5"
+    },
+    {
+      "path": "mixstudio/voice_timing.py",
+      "bytes": 7710,
+      "sha256": "0bd7c7701a7574ed0436e1a8d5a8604067444264e73b8aab93d117114d16abce"
+    },
+    {
+      "path": "mixstudio/whole_voice.py",
+      "bytes": 35035,
+      "sha256": "734563a6b49acd768a7a9d1d2376a7e0d2c4e646730fccde9e18c2cd75ee618f"
+    },
+    {
+      "path": "prompts/narration-v2.md",
+      "bytes": 1736,
+      "sha256": "e3fa36cc3beac544a6f84156494e698f03a44df4ef535cb0048dd314c9ae242c"
+    },
+    {
+      "path": "prompts/script-v2.md",
+      "bytes": 5174,
+      "sha256": "024d65fb8780f537f246671bcfc79339b215642c83e70ff65e23d0f47faae294"
+    },
+    {
+      "path": "requirements-lock.txt",
+      "bytes": 802,
+      "sha256": "94997284888916ae801303e182a8b4066ea3eb961378873b4abaafdd4593d664"
+    },
+    {
+      "path": "requirements.txt",
+      "bytes": 206,
+      "sha256": "5becda1be66bd7c9306b153d564df6731287c7d05a5e8bf7165668affa38a7d3"
+    },
+    {
+      "path": "tools/apply_update.py",
+      "bytes": 17771,
+      "sha256": "5f97374b451074acb3e659ee81d8d70b0b49b4a37bba24299d67df46c0e2fc32"
+    },
+    {
+      "path": "tools/portable_boot.py",
+      "bytes": 5423,
+      "sha256": "556fe875828cf75601eebce95bfd998c39b91ab187a92e43f6c06ed628a068e6"
+    },
+    {
+      "path": "tools/portable_check.py",
+      "bytes": 16050,
+      "sha256": "4da9a06cd44c363ab8693dba266cce9c84fd101287af12dbc7bf750427fbba26"
+    },
+    {
+      "path": "web/app.js",
+      "bytes": 119526,
+      "sha256": "d639d0a7a471e9505556c34f1a57b06eddfd3635e07e98dd9793597377abdb1d"
+    },
+    {
+      "path": "web/brand-icon.ico",
+      "bytes": 45018,
+      "sha256": "f3a19aaecfe22e8081feb68a7b1f1a94da7c373119271ed48315809481e9487a"
+    },
+    {
+      "path": "web/brand-logo.jpg",
+      "bytes": 63595,
+      "sha256": "9ff20d396329776b6cbc260a04a051c941111615fc8856ef3dcc350658b4c536"
+    },
+    {
+      "path": "web/index.html",
+      "bytes": 34392,
+      "sha256": "17849aa5860b8a3693ae43b9f094bc192305442156db0d5344b2dfc2ddc3bede"
+    },
+    {
+      "path": "web/styles.css",
+      "bytes": 48546,
+      "sha256": "5f1d29362c82f89b110e9ea44a429f641f052df7ad1faffebd2e750d2cab3c5c"
+    }
+  ],
+  "preserve": [
+    "runtime",
+    "models",
+    "bin",
+    "fonts",
+    "installers",
+    "personal_data",
+    "RELEASE.json",
+    "FILES.sha256.json"
+  ],
+  "receipt": "SOURCE_UPDATE.json"
+}
