@@ -487,7 +487,7 @@ class WholeVoiceActions:
                     retry_attempt = json.loads(pending.read_text(encoding='utf-8'))['attempt']
             def work(event, progress):
                 from . import media
-                from .timeline import shortage_message
+                from .timeline import TimelineShortage
                 self._free_preflight(draft['asset_ids'], event, lambda v,m:progress(.1*v,m),
                                      settings_snapshot=settings)
                 progress(.12, '整条配音 · 复用成功缓存或一次生成完整口播')
@@ -526,7 +526,7 @@ class WholeVoiceActions:
                 scenes = self._timeline_inputs(current)[0]
                 self.store.put_draft(current)
                 if plan['status'] != 'ready':
-                    raise ValueError(shortage_message(plan)+' 整条音频和成功分析均已保留，可调整画面后继续。')
+                    raise TimelineShortage(plan)
                 _cancel(event)
                 from .subtitle_regions import locate
                 cleaning_warnings = locate(self,plan,scenes,event,lambda v,m:progress(.75+.02*v,m))

@@ -79,6 +79,7 @@ def allowed(relative):
     return (relative in ROOT_FILES or
             (len(p.parts) == 3 and p.parts[:2] == ('app', 'mixstudio') and p.suffix == '.py') or
             (len(p.parts) == 3 and p.parts[:2] == ('app', 'tests') and p.suffix == '.py') or
+            (len(p.parts) == 3 and p.parts[:2] == ('app', 'prompts') and p.suffix == '.md') or
             relative in {'app/web/app.js', 'app/web/index.html', 'app/web/styles.css',
                          'app/AGENTS.md', 'app/README.md', 'app/.impeccable/design.json',
                          'app/.impeccable/direction-contract.md', 'app/tests/fixtures/lianghe_frontend_contract.json',
@@ -160,6 +161,41 @@ def wait_closed(root, seconds=0):
         time.sleep(.5)
 
 
+def compatible_profile(root, manifest):
+    """Recognize published program bytes despite metadata-only base changes.
+
+    WorkBuddy source sync deliberately preserves the old FILES manifest. Do
+    not trust that stale manifest or accept arbitrary locally edited code.
+    """
+    profiles = manifest.get('compatibility_profiles', [])
+    if not isinstance(profiles, list) or len(profiles) > 32:
+        return None
+    actual_names = set()
+    for folder, pattern in (('app/mixstudio','*.py'),('app/tools','*.py'),
+                            ('app/prompts','*.md'),('app/web','*.js'),
+                            ('app/web','*.html'),('app/web','*.css')):
+        for f in clean_path(root, folder).glob(pattern):
+            actual_names.add(f.relative_to(root).as_posix())
+    anchors = {'runtime/python.exe', '量禾混剪.exe'}
+    memo = {}
+    for profile in profiles:
+        rows = profile.get('hashes', {}) if isinstance(profile, dict) else {}
+        if not isinstance(rows, dict) or set(rows) != actual_names | anchors:
+            continue
+        valid = True
+        for name, expected in rows.items():
+            path = clean_path(root, name)
+            if name not in memo:
+                memo[name] = sha(path) if path.is_file() else None
+            if not isinstance(expected, str) or memo[name] != expected:
+                valid = False; break
+        if valid:
+            return {'version':profile.get('version','known-source'), 'program_profile':True,
+                'old':{r['path']:sha(clean_path(root,r['path'])) if clean_path(root,r['path']).is_file() else None
+                       for r in manifest.get('files',[])}}
+    return None
+
+
 def validate(root, bundle):
     root, bundle = Path(root).absolute(), Path(bundle).absolute()
     for name in ('RELEASE.json', 'FILES.sha256.json', 'runtime/python.exe', 'app/tools/portable_check.py'):
@@ -176,6 +212,12 @@ def validate(root, bundle):
                 raise ValueError('当前版本程序文件校验不符，请保留现场后检查')
         return manifest, None
     base = manifest.get('bases', {}).get(current_digest)
+    if not base:
+        base = compatible_profile(root, manifest)
+    elif any((sha(clean_path(root,n)) if clean_path(root,n).is_file() else None) != expected
+             for n,expected in base.get('old',{}).items()):
+        # A recognized source-sync may still carry an official old FILES hash.
+        base = compatible_profile(root, manifest) or base
     if not base:
         raise ValueError('此更新包与安装版本不匹配，请下载对应更新包；原程序未修改')
     rows = manifest.get('files')
@@ -200,7 +242,7 @@ def validate(root, bundle):
         if name.endswith('.py'):
             ast.parse(new.read_text('utf-8-sig'), filename=name)
     # Detect modifications to unchanged executable app files as well.
-    for row in read_json(root/'FILES.sha256.json'):
+    for row in ([] if base.get('program_profile') else read_json(root/'FILES.sha256.json')):
         name = row['path']
         if name.startswith('app/') and Path(name).suffix in ('.py', '.js', '.html', '.css'):
             item = clean_path(root, name)

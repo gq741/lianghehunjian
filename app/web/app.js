@@ -889,7 +889,8 @@
     const phase = plan.phase === "actual" ? "实测配音" : "预计配音";
     const head = element("div", "timeline-overview");
     head.append(element("strong", timelineReady(draft) && current ? "timeline-ready" : "timeline-shortage", !current ? "选择已变更，保存后更新计划" : timelineReady(draft) ? "时间线完整" : "时间线有缺口"));
-    head.append(element("span", "", `${phase}倍速 ${seconds(plan.speed)}×`), element("span", "", `额外复用 ${Number(plan.repeat_count) || 0}/2 次`), element("span", "", `净画面 ${seconds(plan.total_seconds)} 秒`)); node.append(head);
+    const covered = Number.isFinite(plan.covered_seconds) ? plan.covered_seconds : Array.isArray(plan.windows) ? Math.max(0, plan.windows.reduce((sum, w) => sum + (Number(w.playback_seconds) || 0), 0) - (Number(plan.transition_seconds) || 0) * Math.max(0, plan.windows.length - 1)) : null;
+    head.append(element("span", "", `${phase}倍速 ${seconds(plan.speed)}×`), element("span", "", `额外复用 ${Number(plan.repeat_count) || 0}/2 次`), element("span", "", `口播 ${seconds(plan.total_seconds)} 秒`), element("span", "", `已配净画面 ${covered === null ? "待重算" : `${seconds(covered)} 秒`}`)); node.append(head);
     const table = element("table", "timeline-table");
     const header = element("tr", ""); for (const text of ["口播", "所需净画面", "可用净画面", "缺口"]) header.append(element("th", "", text));
     const thead = element("thead", ""); thead.append(header); table.append(thead);
@@ -905,8 +906,8 @@
     }
     table.append(body); node.append(table);
     if (Array.isArray(plan.shortages)) for (const item of plan.shortages) {
-      const index = (draft.segments || []).findIndex((segment) => segment.segment_id === item.segment_id);
-      node.append(element("p", "timeline-shortage-note", `${index < 0 ? "全片" : `文案 ${index + 1}`}：${item.reason || "净画面时长不足"}`));
+      const index = visualGroups.findIndex((segment) => segment.segment_id === item.segment_id);
+      node.append(element("p", "timeline-shortage-note", `${index < 0 ? "全片" : `文案组 ${index + 1}`}：${item.reason || "净画面时长不足"}`));
     }
     if (current && plan.transition_adjustment?.reason === "transition_overlap_shortage" && plan.transition_seconds === 0) {
       node.append(element("p", "field-hint", "当前计划已自动改为直切，避免淡化转场重叠造成时长缺口。"));

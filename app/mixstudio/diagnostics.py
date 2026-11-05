@@ -1,5 +1,6 @@
 """Small, allowlisted failure metadata. Never stores payloads or raw responses."""
 import re
+import math
 
 _CODES = frozenset({'provider_error', 'invalid_input', 'invalid_key', 'cancelled',
     'timeout', 'network_timeout', 'dns', 'network_dns', 'tls', 'network_tls',
@@ -10,7 +11,7 @@ _CODES = frozenset({'provider_error', 'invalid_input', 'invalid_key', 'cancelled
     'asr_failed', 'download_failed', 'download_limit', 'download_tls',
     'download_transport', 'file_error', 'insufficient_material', 'invalid_download',
     'invalid_transcript', 'invalid_url', 'missing_dependency', 'missing_model',
-    'output_exists', 'process_output', 'process_start', 'process_stop'})
+    'output_exists', 'process_output', 'process_start', 'process_stop', 'timeline_shortage'})
 _ISSUES = frozenset({'missing_ids', 'duplicate_ids', 'unknown_ids', 'json_invalid',
     'truncated', 'blocked', 'schema_invalid'})
 _TYPES = frozenset({'object', 'array', 'string', 'number', 'boolean', 'null',
@@ -34,6 +35,10 @@ def normalize_diagnostic(value):
     if not isinstance(value, dict):
         return {}
     clean = {}
+    case = value.get('timeline_case')
+    if _valid_timeline_case(case):
+        clean['timeline_case'] = {**case, 'raw':list(case['raw']),
+            'scenes':[list(row) for row in case['scenes']], 'pools':[list(row) for row in case['pools']]}
     code = value.get('code')
     if isinstance(code, str) and (code in _CODES or re.fullmatch(r'http_[1-5][0-9]{2}', code)):
         clean['code'] = code
@@ -111,6 +116,30 @@ def normalize_diagnostic(value):
         if safe_shape:
             clean['response_shape'] = safe_shape
     return clean
+
+
+def _valid_timeline_case(case):
+    def number(v, lo, hi):
+        return type(v) in (int, float) and math.isfinite(v) and lo <= v <= hi
+    if not isinstance(case, dict) or set(case) != {'version','raw','scenes','pools','target','transition','max_voice_speed','phase'}:
+        return False
+    if (type(case['version']) is not int or case['version'] != 1
+            or case['phase'] not in ('actual','estimated')
+            or not number(case['target'],5,60) or not number(case['transition'],0,.8)
+            or not number(case['max_voice_speed'],1,1.5)):
+        return False
+    raw, scenes, pools = case['raw'], case['scenes'], case['pools']
+    if (not isinstance(raw,list) or not 1 <= len(raw) <= 64 or not all(number(v,.05,300) for v in raw)
+            or not isinstance(scenes,list) or len(scenes)>256
+            or not isinstance(pools,list) or len(pools)!=len(raw)):
+        return False
+    if not all(isinstance(row,list) and len(row)==3 and type(row[0]) is int and 0<=row[0]<256
+        and number(row[1],0,86400) and number(row[2],0,86400) and row[1]<row[2] for row in scenes):
+        return False
+    if not all(isinstance(row,list) and len(row)<=256 and
+        all(type(i) is int and 0<=i<len(scenes) for i in row) and len(set(row))==len(row) for row in pools):
+        return False
+    return sum(map(len,pools))<=4096
 
 
 def copy_diagnostic(source, target):

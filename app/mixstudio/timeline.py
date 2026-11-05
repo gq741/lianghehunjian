@@ -12,6 +12,76 @@ EPS = .001
 MAX_WINDOWS = 512
 MIN_VIDEO_SPEED = .85
 MAX_VOICE_SPEED = 1.5
+SEARCH_NODES = 12000
+
+
+class TimelineShortage(ValueError):
+    code = 'timeline_shortage'
+
+    def __init__(self, plan):
+        super().__init__(shortage_message(plan) + ' 整条音频和成功分析均已保留，可调整画面后继续。')
+        self.diagnostic = {'code': self.code}
+        if plan.get('replay_case'):
+            self.diagnostic['timeline_case'] = plan['replay_case']
+
+
+def _reallocate(pools, sids, required, fade, video_speed):
+    """Bounded backtracking of whole allocations, not another greedy ordering.
+
+    Reconsider earlier choices when a later sentence is starved. Evidence,
+    original-range reuse and the two-extra-use limit are unchanged.
+    """
+    rarity = defaultdict(int)
+    for pool in pools.values():
+        for c in pool:
+            rarity[_identity(c)] += 1
+    options = []
+    for sid in sids:
+        unique = {}
+        for c in pools[sid]:
+            unique.setdefault(_identity(c), c)
+        options.append(sorted(unique.values(), key=lambda c:
+            (rarity[_identity(c)], -(c['end']-c['start'])))[:64])
+    order = sorted(range(len(sids)), key=lambda i:
+        (sum(c['end']-c['start'] for c in options[i])/required[i], len(options[i])))
+    chosen = [[] for _ in sids]
+    selected, nodes = [], 0
+
+    def visit(unit, first=0, covered=0.):
+        nonlocal nodes
+        if nodes >= SEARCH_NODES:
+            return False
+        nodes += 1
+        if unit == len(order):
+            return True
+        i = order[unit]
+        if covered + 1e-8 >= required[i]:
+            return visit(unit+1)
+        if len(selected) >= MAX_WINDOWS:
+            return False
+        # Optimistic upper bound only prunes impossible branches. Actual
+        # overlap and repeat accounting still checks every proposed choice.
+        if covered + 2*sum((c['end']-c['start'])/video_speed for c in options[i][first:]) + 1e-8 < required[i]:
+            return False
+        for pos in range(first, len(options[i])):
+            c = options[i][pos]
+            stats = reuse_stats(selected+[c])
+            if stats['max_uses'] > 2 or stats['repeat_count'] > 2:
+                continue
+            added = (c['end']-c['start'])/video_speed - (fade if chosen[i] else 0.)
+            if added <= 0:
+                continue
+            chosen[i].append(c); selected.append(c)
+            if visit(unit, pos, covered+added):
+                return True
+            selected.pop(); chosen[i].pop()
+            if nodes >= SEARCH_NODES:
+                break
+        return False
+
+    if visit(0):
+        return ((0, 0., reuse_stats(selected)['repeat_count'], len(selected)), chosen, required), nodes
+    return None, nodes
 
 
 def _number(value, name, low=0, high=86400):
@@ -79,7 +149,7 @@ def shortage_message(plan):
     timing = '；'.join(w for w in plan.get('warnings',[]) if '配音时长' in w)
     return ('自动排片暂未找到满足全部约束的方案' + ('：'+detail if detail else '') +
             ('；'+timing+'，请调整文案' if timing else '') +
-            '。已尝试相关镜头裁切、转场调整、适度画面慢放及允许复用；当前真实画面仍不足，请补充相关素材或调整镜头选择。')
+            '。已尝试相关镜头裁切、转场调整、适度画面慢放及允许复用；当前候选与复用限制下尚未排齐，不代表所有原素材都不足。请调整镜头选择或补充相关素材。')
 
 
 def plan_timeline(segments, scenes, candidates, *, target_seconds, transition_seconds,
@@ -185,6 +255,7 @@ def plan_timeline(segments, scenes, candidates, *, target_seconds, transition_se
         return best
 
     speed = min(maximum_speed, minimum_speed)
+    search_nodes = 0
     video_speed = 1.
     feasible_range = minimum_speed <= maximum_speed + 1e-9 and total >= low
     result = attempt(speed, 0)
@@ -214,6 +285,13 @@ def plan_timeline(segments, scenes, candidates, *, target_seconds, transition_se
             result = attempt(speed, 2, video_speed)
         else:
             video_speed, result = MIN_VIDEO_SPEED, slow_result
+    # Greedy orders can spend both repeats on short high-ranked clips and
+    # strand a later sentence even when a valid global assignment exists.
+    # Search before considering faster speech; never add unrelated scenes.
+    if feasible_range and result[0][0]:
+        repaired, search_nodes = _reallocate(pools, sids, result[2], fade, video_speed)
+        if repaired is not None:
+            result = repaired
     if feasible_range and result[0][0] and maximum_speed > speed:
         high_result = attempt(maximum_speed, 2, video_speed)
         if high_result[0][0] == 0:
@@ -247,7 +325,7 @@ def plan_timeline(segments, scenes, candidates, *, target_seconds, transition_se
         row = {'segment_id':sid, 'raw_seconds':raw[i], 'voice_seconds':raw[i]/speed,
                'required_seconds':required[i], 'available_seconds':max(0.,available),
                'missing_seconds':missing, 'clip_ids':[c['clip_id'] for c in clips],
-               'video_speed':local_video_speed}
+               'video_speed':local_video_speed, 'candidate_count':len(pools[sid])}
         rows.append(row)
         if missing > 1e-7:
             shortages.append({**row, 'reason':'相关候选不足' if pools[sid] else '本句没有已关联的相关候选，请重新自动匹配'})
@@ -287,7 +365,21 @@ def plan_timeline(segments, scenes, candidates, *, target_seconds, transition_se
             'total_seconds':total/speed,'transition_seconds':fade,'segments':rows,
             'windows':windows,'shortages':shortages,'warnings':warnings,
             'timing_constraint':{'status':timing_issue,'min_seconds':low,'max_seconds':high},
-            'search_strategy':'bounded_multi_order','candidate_count':sum(map(len,pools.values()))}
+            'search_strategy':'bounded_multi_order_backtracking_v2', 'search_nodes':search_nodes,
+            'covered_seconds':max(0., sum(w['playback_seconds'] for w in windows)-fade*max(0,len(windows)-1)),
+            'candidate_count':sum(map(len,pools.values()))}
+    # Numeric-only replay: no narration, paths, source hashes, product data or
+    # credentials. Small failure cases can be diagnosed from the usual log.
+    if status != 'ready' and len(index) <= 256 and sum(map(len,pools.values())) <= 4096:
+        aliases, records, positions = {}, [], {}
+        for cid, c in index.items():
+            source, a, b = _identity(c)
+            aliases.setdefault(source, len(aliases))
+            positions[cid] = len(records)
+            records.append([aliases[source], a, b])
+        plan['replay_case'] = {'version':1, 'raw':raw, 'scenes':records,
+            'pools':[[positions[c['clip_id']] for c in pools[sid]] for sid in sids],
+            'target':target, 'transition':transition, 'max_voice_speed':maximum_speed, 'phase':phase}
     if status == 'ready' and transition > 0 and fade == 0:
         plan['transition_adjustment'] = {
             'requested_seconds':transition, 'applied_seconds':0.,

@@ -18,3 +18,11 @@ UPDATE_FEED.json 包含 format=1、version、base_manifests（支持的旧 FILES
 生成 UPDATE_FEED.json、UPDATE.json 和程序小更新 ZIP，扫描密钥，先创建草稿 Release。
 校验远端每个附件 SHA256 后发布，再以匿名下载验证客户端检查/下载入口；不要改动旧 Release 附件。
 ```
+
+
+## 2026.11.05 兼容性补充
+
+原整清单哈希分支保留。UPDATE.json 可包含 compatibility_profiles：已知发行版的实际运行源码清单，以及 runtime/python.exe 和量禾混剪.exe 的 SHA256。
+当旧 FILES 哈希不同，或 WorkBuddy 已同步源码但保留旧清单时，只接受程序路径集合和逐项字节均与已知 profile 完全一致的安装；未知改动、附加运行模块、不同启动器拒绝覆盖。
+此分支不根据旧清单伪造兼容性；先备份接收端实际旧字节，再按同一写入/自检/回退事务替换批准的程序文件。用户数据与运行时不写入。
+匿名 timeline_case 仅保存有界数字数组（源身份序号、窗口范围、候选索引、实测时长），不记录文案、真实路径、源哈希或凭据；大案例仍只保存标准状态。

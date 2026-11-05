@@ -2,7 +2,6 @@
   "format": 1,
   "mode": "workbuddy-source",
   "root": "app",
-  "code_commit": "39296d7ef18b7b97d4080ecfb2c2f42232e7989d",
   "files": [
     {
       "path": "app.py",
@@ -26,8 +25,8 @@
     },
     {
       "path": "mixstudio/diagnostics.py",
-      "bytes": 6461,
-      "sha256": "2de78bc50a635fcc3d245867768507b94d9e07cbf50371d1d24c2c6ec25a2e63"
+      "bytes": 8086,
+      "sha256": "fa760b894928c98b2a56e7ed6787f8a145112dea5d3d270bb9dffdbf164b6be9"
     },
     {
       "path": "mixstudio/draft_history.py",
@@ -146,13 +145,13 @@
     },
     {
       "path": "mixstudio/timeline.py",
-      "bytes": 16194,
-      "sha256": "df57b8db223ad4b3e239a804bfd3b769fd8f05ae5dceb750c19ffd96d38cee81"
+      "bytes": 20423,
+      "sha256": "30c3acb2db527b8f1538f715a7b67123d2b0379118c58e47bec543597ccf4dd0"
     },
     {
       "path": "mixstudio/updates.py",
       "bytes": 9283,
-      "sha256": "dd38cfdb1f8d2e8c3f3258751b0bdeeb4ae0715b8817ebb600c8fd7d4fa11969"
+      "sha256": "e9d22b843f4b4f14d1da58f55c626cc5f20b895a1bf28a77b4b8483c81b6aa78"
     },
     {
       "path": "mixstudio/v2.py",
@@ -176,8 +175,8 @@
     },
     {
       "path": "mixstudio/whole_voice.py",
-      "bytes": 35035,
-      "sha256": "734563a6b49acd768a7a9d1d2376a7e0d2c4e646730fccde9e18c2cd75ee618f"
+      "bytes": 34950,
+      "sha256": "c9e61519cafa943ac08ed27553c80d6554d3f9f10772fa6e0d8a602745905edc"
     },
     {
       "path": "prompts/narration-v2.md",
@@ -201,8 +200,8 @@
     },
     {
       "path": "tools/apply_update.py",
-      "bytes": 17771,
-      "sha256": "5f97374b451074acb3e659ee81d8d70b0b49b4a37bba24299d67df46c0e2fc32"
+      "bytes": 19936,
+      "sha256": "3b52c4a87fe2d5fbefa2ee6c3db3f4e656c08dbf716fcbae38c04c02cd4bd294"
     },
     {
       "path": "tools/portable_boot.py",
@@ -216,8 +215,8 @@
     },
     {
       "path": "web/app.js",
-      "bytes": 119526,
-      "sha256": "d639d0a7a471e9505556c34f1a57b06eddfd3635e07e98dd9793597377abdb1d"
+      "bytes": 119909,
+      "sha256": "0f33473ab6739f98c22480b0ef124df1f9ddf0bde9eeb45ae8fd07b99a04509a"
     },
     {
       "path": "web/brand-icon.ico",
@@ -250,5 +249,7 @@
     "RELEASE.json",
     "FILES.sha256.json"
   ],
-  "receipt": "SOURCE_UPDATE.json"
+  "receipt": "SOURCE_UPDATE.json",
+  "version": "2026.11.05",
+  "parent_commit": "d0724f9df90cc7fc98ee1a7a9c119f0c1f50fe48"
 }
