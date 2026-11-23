@@ -18,7 +18,7 @@ import zipfile
 REPOSITORY = 'gq741/lianghehunjian'
 API = 'https://api.github.com/repos/' + REPOSITORY + '/releases?per_page=20'
 RELEASES = 'https://github.com/' + REPOSITORY + '/releases'
-VERSION = '2026.11.05'
+VERSION = '2026.11.23'
 MAX_DOWNLOAD = 32 * 1024 * 1024
 
 

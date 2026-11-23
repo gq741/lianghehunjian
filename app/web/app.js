@@ -742,11 +742,16 @@
       const targetSeconds = Number($("target-seconds").value);
       durationBounds(targetSeconds);
       if (!Number.isInteger(count) || count < 1 || count > 5) throw new Error("生成数量请填写 1～5 的整数。");
+      const expectedProduct = { sku: state.product.sku, title: state.product.title };
+      const assetIds = [...state.selected];
       const accepted = await confirmAction("生成口播文案？",
         `根据“${state.product.title}”生成 ${count} 条文案，参考时长 ${targetSeconds} 秒，成片按实测配音与镜头校准，最长 60 秒。\n\n本次只调用 DeepSeek，可能产生接口费用；不会自动转写、识别画面或调用 ${voiceProviderName(true)} 配音。`,
         "确认调用 DeepSeek");
       if (!accepted) return;
-      await api("/api/v2/generate", "POST", { asset_ids: [...state.selected], target_seconds: targetSeconds, count, voice_first: true, allow_paid: true });
+      if (state.product?.sku !== expectedProduct.sku || state.product?.title !== expectedProduct.title ||
+          state.productInputDirty || state.requestedProductUrl || assetIds.length !== state.selected.size ||
+          assetIds.some(id => !state.selected.has(id))) throw new Error("商品或素材选择已改变，请重新确认后生成文案。");
+      await api("/api/v2/generate", "POST", { asset_ids: assetIds, expected_product: expectedProduct, target_seconds: targetSeconds, count, voice_first: true, allow_paid: true });
       state.pendingDrafts = true;
       toast("文案任务已提交，完成后会显示在下方。");
       await refresh();
@@ -1047,31 +1052,71 @@
     } else toast("已保存刚才提交的画面选择；当前新增修改保持不变，请继续保存。");
     await refresh();
   }));
+  async function productionBudget(id, retry = false, offerMissing = false) {
+    const budget = await api(`/api/v2/drafts/${encodeURIComponent(id)}/production-budget${retry ? "?retry=1" : ""}`);
+    if (!budget || typeof budget.token !== "string" || !budget.token || typeof budget.local_only !== "boolean" || !Array.isArray(budget.paid_steps) ||
+        budget.paid_steps.some(step => !["fish", "minimax", "vision", "deepseek"].includes(step)) ||
+        (budget.local_only !== (budget.paid_steps.length === 0) && !budget.blocked)) throw new Error("未能确认续做步骤，请刷新后再试。");
+    if (offerMissing && !retry && budget.blocked && budget.voice_state === "missing") {
+      const ok = await confirmAction("已购买的配音文件缺失", "恢复原音频后可免费继续。若已核对并决定重新购买，可先查看本次费用；在最终确认前不会调用模型。", "查看重新配音费用");
+      if (!ok) return null;
+      const updated = await productionBudget(id, true);
+      if (updated.voice_state !== "missing" || updated.revision !== budget.revision) throw new Error("配音或文案状态已改变，请重新确认。");
+      return { ...updated, replace_missing_audio: true };
+    }
+    if (budget.blocked) throw new Error(budget.message || "请先核对上次请求，再从任务列表继续。");
+    return budget;
+  }
+  function requireStepKeys(steps) {
+    for (const step of steps) {
+      const key = step === "vision" ? "glm" : step;
+      if (!state.settings[`${key}_key_set`]) {
+        setPage("settings"); $(`set-${key}_api_key`).focus();
+        throw new Error(`本次需要${({glm:"GLM", deepseek:"DeepSeek", fish:"Fish Audio", minimax:"MiniMax"})[key]}，请先保存对应的 API Key。`);
+      }
+    }
+  }
+  function describeBudget(budget) {
+    const labels = {fish:"一整条 Fish Audio 配音", minimax:"一整条 MiniMax 配音", vision:"GLM 画面识别", deepseek:"DeepSeek 画面匹配"};
+    const reused = [budget.voice_state === "cached" ? "整条配音" : "", budget.alignment_state === "cached" ? "语音时码" : "", budget.matching_state === "cached" ? "镜头选择" : budget.matching_state === "semantic" ? "画面识别" : ""].filter(Boolean);
+    const quote = Number.isInteger(budget.semantic_new_requests) && Number.isInteger(budget.semantic_cached_batches) ? `语义匹配已缓存 ${budget.semantic_cached_batches} 批，本次最多新增 ${budget.semantic_new_requests} 次请求。` : "";
+    return [quote, reused.length ? `已保留：${reused.join("、")}。` : "", budget.message, budget.local_only ? "仅在本地继续，本次不调用收费模型。" :
+      `可能收费：${budget.paid_steps.map(step => labels[step]).join("、")}。不会自动重复提交收费请求。`,budget.paid_steps.includes("vision") ? "GLM 仅需补分析的素材会发起新请求：每条源视频最多 90 个窗口、45 次常规请求。" : ""].filter(Boolean).join("\n");
+  }
   async function renderVideos(drafts) {
     if (state.draftDirty || state.matchesDirty) throw new Error("请先保存文案和画面选择，再生成视频。");
     if (drafts.some((draft) => isV2Draft(draft) && !narrationTiming(draft).ready)) throw new Error("本组有空白或无效文案，请先完善并保存。");
     if (drafts.some((draft) => !canRenderDraft(draft))) throw new Error("请先为每条文案匹配完整画面，并预览核对。");
     const provider = voiceProvider();
     if ($("set-voice_provider").value !== provider) { setPage("settings"); $("save-settings").focus(); throw new Error("配音服务已更改，请先保存设置，再确认生成视频。"); }
-    if (!state.settings[`${provider}_key_set`]) { setPage("settings"); $(`set-${provider}_api_key`).focus(); throw new Error(`请先保存 ${voiceProviderName()} API Key。`); }
     if (!drafts.length) throw new Error("请先生成并确认文案。");
     // Keep the shown paid consent and its request on the same saved voice snapshot.
     const voice = provider === "minimax"
       ? { provider, model: state.settings.minimax_model || defaultSettings.minimax_model, voice_id: state.settings.minimax_voice_id || defaultSettings.minimax_voice_id }
       : { provider, model: "s2.1-pro", voice_id: state.settings.voice_id || defaultSettings.voice_id };
-    const voiceName = provider === "minimax" ? "MiniMax" : "Fish Audio";
-    const shortVoiceName = provider === "minimax" ? "MiniMax" : "Fish";
-    const budgetNotice = await matchingBudgetNotice(drafts, "produce");
+    const budgets = new Map();
+    const notices = [];
+    for (const draft of drafts) {
+      const budget = usesWholeVoice(draft) ? await productionBudget(draft.id, false, drafts.length === 1) : null;
+      if (usesWholeVoice(draft) && !budget) return;
+      budgets.set(draft.id, budget);
+      requireStepKeys(budget ? budget.paid_steps : [provider]);
+      const notice = budget ? describeBudget(budget) : `历史流程：${voiceProviderName()} 配音可能收费，已有成功缓存会复用。`;
+      notices.push(drafts.length > 1 ? `${notices.length+1}. ${notice}` : notice);
+    }
+    const localOnly = drafts.every(draft => budgets.get(draft.id)?.local_only);
     const migrationNotice = drafts.some(isWholeVoiceUpgrade) ? `\n\n${wholeVoiceUpgradeNotice}` : "";
     const longCopyNotice = drafts.some(draft => usesWholeVoice(draft) && !draft.whole_audio && !draft.whole_voice && narrationTiming(draft).estimated > 60) ? "\n\n文案字数只作估算，真实配音可能超过 60 秒交付上限；不会自动截断或重新购买配音。建议先精简文案，再决定是否付费生成。" : "";
     const accepted = await confirmAction("确认文案并生成视频？",
-      `先免费预检，然后为 ${drafts.length} 条文案各生成一整条 ${shortVoiceName} 配音，按实测语音分析、匹配画面并导出。\n\n这会产生 ${voiceName} 配音、GLM 画面识别和 DeepSeek 匹配费用。${visionCostNotice}\n\n${budgetNotice}\n\n请确认文案与音色。成功缓存会复用。参考时长仅作参考，成片按实测配音与镜头校准，最长 60 秒。画面偏长自动裁短，偏短时可适度慢放；必要时使用允许的复用额度和自然语速整条配音，不为了凑参考时长加速口播。确有相关画面不足或超过 60 秒上限时会保留缓存，不自动追加配音。若接口结果不确定，不会自动重复提交收费请求。${migrationNotice}${longCopyNotice}`,
-      `确认生成 ${drafts.length} 条`);
+      `先免费预检，再按以下步骤继续：\n\n${notices.join("\n\n")}\n\n成片跟随实测配音，最长 60 秒。${migrationNotice}${longCopyNotice}`,
+      localOnly ? "仅在本地继续" : `确认生成 ${drafts.length} 条`);
     if (!accepted) return;
     let submitted = 0;
     try {
       for (const draft of drafts) {
-        await api(usesWholeVoice(draft) ? `/api/v2/drafts/${encodeURIComponent(draft.id)}/produce` : `/api/drafts/${encodeURIComponent(draft.id)}/render`, "POST", { allow_paid: true, voice });
+        const budget = budgets.get(draft.id);
+        await api(budget ? `/api/v2/drafts/${encodeURIComponent(draft.id)}/produce` : `/api/drafts/${encodeURIComponent(draft.id)}/render`, "POST",
+          budget ? { allow_paid: !budget.local_only, expected_budget: budget.token, voice, ...(budget.replace_missing_audio ? {replace_missing_audio:true} : {}) } : { allow_paid: true, voice });
         submitted++;
       }
       toast(`${submitted} 条视频任务已提交。`);
@@ -1099,13 +1144,22 @@
     video.scrollIntoView({ block: "center", behavior: "auto" });
   }
   async function retryJob(job) {
+    const draft = state.drafts.find(item => item.id === job.draft_id);
+    if (job.kind === "render" && (job.pipeline === "whole_voice_v1" || usesWholeVoice(draft))) {
+      const budget = await productionBudget(job.draft_id, true);
+      requireStepKeys(budget.paid_steps);
+      const accepted = await confirmAction("从上次进度继续？", describeBudget(budget),
+        budget.local_only ? "仅在本地继续" : "确认续做及可能的费用");
+      if (!accepted) return;
+      await api(`/api/v2/jobs/${encodeURIComponent(job.id)}/retry`, "POST", { allow_paid: !budget.local_only, expected_budget: budget.token });
+      toast("续做任务已提交。"); await refresh(); return;
+    }
     const paid = ["prepare", "script", "match", "render"].includes(job.kind);
     const accepted = await confirmAction(paid ? "确认重新提交任务？" : "重试任务？",
       paid ? `这将重新执行${{ render: `整条 ${voiceProviderName()} 配音、画面分析匹配及合成（成功缓存复用）`, prepare: "历史转写与 DeepSeek 改写", script: "DeepSeek 文案生成", match: "视觉分析与 DeepSeek 匹配" }[job.kind]}，可能再次产生接口费用。${job.kind === "match" ? `${visionCostNotice}本次不调用 ${voiceProviderName(true)} 配音。` : ""}若上次请求结果不确定，请先核对服务端状态再重试。` : "将重新提交这个任务，已有原素材保持不变。",
       paid ? "确认重试及可能的费用" : "重试");
     if (!accepted) return;
-    const draft = state.drafts.find(item => item.id === job.draft_id);
-    const route = job.kind === "render" && usesWholeVoice(draft) ? `/api/v2/jobs/${encodeURIComponent(job.id)}/retry` : `/api/jobs/${encodeURIComponent(job.id)}/retry`;
+    const route = `/api/jobs/${encodeURIComponent(job.id)}/retry`;
     const productVersion = state.productInputVersion;
     const submitted = await api(route, "POST", { allow_paid: paid });
     if (job.kind === "product") {
@@ -1179,7 +1233,7 @@
         toast("已请求取消，正在结束后台步骤。"); await refresh();
       }, "button button-small button-quiet"));
     }
-    if (["failed", "cancelled", "interrupted"].includes(job.status)) actions.append(action("重试", () => retryJob(job)));
+    if (["failed", "cancelled", "interrupted"].includes(job.status)) actions.append(action(job.pipeline === "whole_voice_v1" ? "继续" : "重试", () => retryJob(job)));
     if (job.kind === "render" && job.status === "completed") {
       actions.append(action("预览成片", () => showOutput(job)), action("打开目录", () => api("/api/open-output", "POST", { job_id: job.id })));
     }
@@ -1247,7 +1301,7 @@
       $(`${name}-key-status`).classList.toggle("configured", configured);
     }
     $("voice-provider-label").textContent = voiceProviderName();
-    $("render-cost-hint").textContent = `确认后先免费预检，再生成整条配音、自动匹配画面并导出。会确认 ${voiceProviderName()}、GLM 和 DeepSeek 的可能费用，成功缓存复用；不保留素材原始口播。`;
+    $("render-cost-hint").textContent = `先检查可复用的配音和画面，只列出本次需要的步骤及可能费用。当前配音：${voiceProviderName()}。`;
     $("cleaning-label").textContent = { none: "不处理原字幕", blur: "区域模糊", delogo: "区域修补" }[state.settings.clean_mode] || "不处理原字幕";
     $("transition-label").textContent = state.settings.transition === "none" ? "直切" : `轻柔淡化 ${state.settings.transition_seconds ?? 0.2}s`;
   }

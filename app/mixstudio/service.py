@@ -126,6 +126,8 @@ class Studio(MusicActions, WholeVoiceActions, V2Actions):
             public_job = {k: v for k, v in job.items() if k != "payload"}
             if job["kind"] in {"render", "match", "alignment"}:
                 public_job["draft_id"] = job.get("payload", {}).get("draft_id")
+            if job['kind'] == 'render' and job.get('payload', {}).get('pipeline') == 'whole_voice_v1':
+                public_job['pipeline'] = 'whole_voice_v1'
             if compact and isinstance(public_job.get('result'), dict):
                 # Full timelines remain in SQLite and the authenticated detail
                 # endpoint, not in every periodic progress response.
@@ -275,7 +277,7 @@ class Studio(MusicActions, WholeVoiceActions, V2Actions):
         _cancel(event)
         path = path.resolve(strict=True)
         stat = path.stat()
-        signature = fingerprint(path, event)
+        signature = self._source_signature(path, event)
         after_hash = path.stat()
         if (after_hash.st_size, after_hash.st_mtime_ns) != (stat.st_size, stat.st_mtime_ns):
             raise ValueError('素材读取期间发生改变，请重新读取')
@@ -573,11 +575,20 @@ class Studio(MusicActions, WholeVoiceActions, V2Actions):
                           "start": float(start), "end": end, "text": text.strip()})
         return self.store.set_asset_transcript(identifier, clips)
 
+    def _source_signature(self, path, event):
+        # Every stage still opens the source and checks this filesystem version.
+        # If no trustworthy change counter is available, signature hashes again.
+        value = self._media_identity_cache.signature(path, lambda p: fingerprint(p, event),
+            check_cancel=(lambda: _cancel(event)) if event is not None else None)
+        _cancel(event)
+        return value
+
     def _unchanged(self, asset, event):
+        _cancel(event)
         path = Path(asset["path"])
         current = self.store.asset(asset['id'])
         if (asset.get('selectable') is False or (current and current.get('selectable') is False)
-                or not path.is_file() or fingerprint(path, event) != asset["sha256"]):
+                or not path.is_file() or self._source_signature(path, event) != asset["sha256"]):
             raise ValueError("源素材已改变，请刷新素材库并重新选择")
 
     def prepare(self, payload):
@@ -1012,7 +1023,8 @@ class Studio(MusicActions, WholeVoiceActions, V2Actions):
             current_product = self.store.meta('current_product')
             if not current_product or current_product.get('sku') != p['product']['sku']:
                 raise ValueError('当前商品已改变，请重新读取原商品或新建文案任务')
-            return self.generate_v2({**p, 'allow_paid': allow_paid})
+            return self.generate_v2({**p, 'expected_product':{k:p['product'].get(k) for k in ('sku','title')},
+                                     'allow_paid': allow_paid})
         if job['kind'] == 'match':
             return self.match_v2(p['draft_id'], allow_paid)
         if job["kind"] == "scan":

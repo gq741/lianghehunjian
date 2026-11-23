@@ -196,6 +196,17 @@ def compatible_profile(root, manifest):
     return None
 
 
+def verify_app_rows(root, rows, skip=()):
+    """Check installed application inputs, including those omitted by a patch."""
+    for row in rows:
+        name = row['path']
+        if name in skip or not name.startswith('app/') or Path(name).suffix not in ('.py','.js','.html','.css','.md'):
+            continue
+        item = clean_path(root, name)
+        if not item.is_file() or sha(item) != row['sha256']:
+            raise ValueError('当前版本程序文件校验不符，请保留现场后检查')
+
+
 def validate(root, bundle):
     root, bundle = Path(root).absolute(), Path(bundle).absolute()
     for name in ('RELEASE.json', 'FILES.sha256.json', 'runtime/python.exe', 'app/tools/portable_check.py'):
@@ -210,6 +221,7 @@ def validate(root, bundle):
         for row in manifest.get('files', []):
             if not allowed(row['path']) or sha(clean_path(root,row['path'])) != row['sha256']:
                 raise ValueError('当前版本程序文件校验不符，请保留现场后检查')
+        verify_app_rows(root, read_json(root/'FILES.sha256.json'), {r['path'] for r in manifest['files']})
         return manifest, None
     base = manifest.get('bases', {}).get(current_digest)
     if not base:
@@ -247,8 +259,17 @@ def validate(root, bundle):
         if name.startswith('app/') and Path(name).suffix in ('.py', '.js', '.html', '.css'):
             item = clean_path(root, name)
             if not item.is_file() or sha(item) != row['sha256']:
-                raise ValueError('原程序校验不符，请先恢复对应发行版；个人数据未修改')
+                # A base may explicitly describe the known source-sync bytes
+                # while retaining a (recognized) pre-sync FILES receipt. Every
+                # overwritten input was checked above; verify the whole code
+                # profile before treating the stale receipt as metadata only.
+                profile = compatible_profile(root, manifest)
+                if not profile:
+                    raise ValueError('原程序校验不符，请先恢复对应发行版；个人数据未修改')
+                base = profile
+                break
     expected_new = {r['path']:r for r in read_json(bundle/'payload/FILES.sha256.json')}
+    verify_app_rows(root, expected_new.values(), {r['path'] for r in rows})
     for row in rows:
         if row['path'] != 'FILES.sha256.json' and expected_new.get(row['path']) != row:
             raise ValueError('更新后总清单与补丁不一致')
@@ -290,6 +311,14 @@ def restore(root, backup):
             raise ValueError('程序文件在更新后再次变化，已停止回退以保留改动')
         if row['before'] is not None and sha(clean_path(backup/'original', row['path'])) != row['before']:
             raise ValueError('回退备份校验失败')
+    # A manual rollback is itself a transaction. Publish its intent before
+    # touching program bytes, so a restart cannot boot the half-restored app.
+    gate = clean_path(root, GATE)
+    if gate.exists() and read_json(gate).get('backup') != backup.name:
+        raise ValueError('有另一笔未完成的更新，请先恢复该更新')
+    write_json(gate, {'backup':backup.name, 'version':journal['version'], 'operation':'rollback'})
+    journal['status'] = 'rolling_back'
+    write_json(backup/'journal.json', journal)
     for row in reversed(journal['files']):
         path = clean_path(root, row['path'])
         if row['before'] is None:
@@ -303,7 +332,6 @@ def restore(root, backup):
             raise ValueError('回退校验未通过，请保留备份与报告')
     journal['status'] = 'rolled_back'
     write_json(backup/'journal.json', journal)
-    gate = clean_path(root, GATE)
     if gate.is_file() and read_json(gate).get('backup') == backup.name:
         gate.unlink()
     return {'status':'rolled_back', 'backup':str(backup), 'restored_files':len(journal['files'])}
@@ -316,12 +344,13 @@ def apply(root, bundle, *, checker=selfcheck, wait_seconds=0):
         wait_closed(root, wait_seconds)
         gate = clean_path(root, GATE)
         if gate.exists():
-            name = read_json(gate).get('backup', '')
+            intent = read_json(gate)
+            name = intent.get('backup', '')
             if not re.fullmatch(r'\d{8}-\d{6}-[0-9a-f]{8}', name):
                 raise ValueError('更新恢复信息无效，请保留更新报告')
             backup = clean_path(root, BACKUPS+'/'+name)
             journal = read_json(backup/'journal.json')
-            if journal['status'] == 'complete':
+            if journal['status'] == 'complete' and intent.get('operation') != 'rollback':
                 gate.unlink()
             else:
                 return restore(root, backup)
@@ -384,11 +413,22 @@ def main(argv=None):
             with exclusive(root):
                 wait_closed(root, a.wait)
                 backups = clean_path(root, BACKUPS)
-                candidates = [x for x in backups.iterdir() if re.fullmatch(r'\d{8}-\d{6}-[0-9a-f]{8}',x.name)
-                              and read_json(x/'journal.json').get('status') in ('complete','applying','validating','prepared')]
-                if not candidates:
-                    raise ValueError('没有可回退的更新备份')
-                result = restore(root, sorted(candidates)[-1])
+                gate = clean_path(root, GATE)
+                if gate.exists():
+                    name = read_json(gate).get('backup','')
+                    if not re.fullmatch(r'\d{8}-\d{6}-[0-9a-f]{8}',name):
+                        raise ValueError('更新恢复信息无效，请保留更新报告')
+                    backup = clean_path(backups,name)
+                else:
+                    # No journal means the process stopped during the backup
+                    # phase, before any program write. Keep the orphan intact.
+                    candidates = [x for x in backups.iterdir() if re.fullmatch(r'\d{8}-\d{6}-[0-9a-f]{8}',x.name)
+                        and clean_path(x,'journal.json').is_file()
+                        and read_json(x/'journal.json').get('status') in ('complete','applying','validating','rolling_back')] if backups.is_dir() else []
+                    if not candidates:
+                        raise ValueError('没有可回退的更新备份')
+                    backup = max(candidates,key=lambda x: (x/'journal.json').stat().st_mtime_ns)
+                result = restore(root, backup)
         else:
             if a.bundle is None:
                 raise ValueError('请通过完整更新包运行')

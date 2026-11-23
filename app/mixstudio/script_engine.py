@@ -684,7 +684,7 @@ def _cached_match_parts(title, normalized, batch, known, context, cache_dir, *, 
 
 
 def match_budget(segments, scenes, *, model, product_title, cache_dir=None,
-                 cache_context=None, cancel=None):
+                 cache_context=None, cancel=None, _pending_batch_ids=None):
     """Local, read-only request estimate for an explicit paid confirmation."""
     p._check_cancel(cancel)
     _, title, normalized, candidates, known, context, batches = _match_inputs(
@@ -698,6 +698,8 @@ def match_budget(segments, scenes, *, model, product_title, cache_dir=None,
         legacy_hits += old_hits
         cached_segment_batches += sum(len(group) for group, _ in cached)
         new_requests += bool(missing)
+        if missing and _pending_batch_ids is not None:
+            _pending_batch_ids.add(_match_body(title, missing, batch, context)[1])
     return {'segment_count': len(normalized), 'available_scene_count': len(candidates),
             'scene_batch_count': len(batches), 'estimated_max_request_count': len(batches),
             'cached_request_count': hits, 'legacy_group_cache_hits': legacy_hits,
@@ -715,7 +717,7 @@ def _matching_tokens(group, batch):
 
 
 def match_segments(segments, scenes, *, api_key, model, product_title, cancel=None, progress=None,
-                   cache_dir=None, cache_context=None):
+                   cache_dir=None, cache_context=None, cache_only=False, max_new_requests=None, allowed_batches=None):
     """Judge every scene batch once against all uncovered sentences (<=64).
 
     Keep all usable scenes and historical validated checkpoints. Cache hits may
@@ -726,7 +728,12 @@ def match_segments(segments, scenes, *, api_key, model, product_title, cancel=No
         segments, scenes, model, product_title, cache_context)
     if not candidates:
         return {'matches': [], 'unmatched': [s['segment_id'] for s in normalized]}
-    p._key(api_key)
+    if type(cache_only) is not bool or (max_new_requests is not None and
+            (type(max_new_requests) is not int or max_new_requests < 0)):
+        raise ValueError('本次语义确认预算无效')
+    if not cache_only:
+        p._key(api_key)
+    submitted = 0
     total, completed = len(batches), 0
     aggregated = {s['segment_id']: [] for s in normalized}
     metadata = {}
@@ -736,10 +743,12 @@ def match_segments(segments, scenes, *, api_key, model, product_title, cancel=No
             progress(completed / total, f'语义候选批次 {completed + 1}/{total}')
         p._check_cancel(cancel)
         cached_parts, missing, _ = _cached_match_parts(
-            title, normalized, batch, known, context, cache_dir)
+            title, normalized, batch, known, context, cache_dir, persist_memory=not cache_only)
         subset = {c['clip_id']: known[c['clip_id']] for c in batch}
         parts = list(cached_parts)
         if missing:
+            if cache_only:
+                raise ValueError('已确认的语义匹配缓存发生变化，请重新确认；未调用 DeepSeek')
             body, identity = _match_body(title, missing, batch, context)
             # No nested striped locks: old checkpoint reads happen above. A
             # concurrent identical request is rechecked under this one lock.
@@ -747,6 +756,11 @@ def match_segments(segments, scenes, *, api_key, model, product_title, cancel=No
                 result = semantic_cache.load(cache_path, identity, _loads)
                 cached = result is not None
                 if not cached:
+                    if allowed_batches is not None and identity not in allowed_batches:
+                        raise ValueError('该语义批次在确认时已缓存，请重新确认；未重复提交该批次')
+                    if max_new_requests is not None and submitted >= max_new_requests:
+                        raise ValueError('语义匹配的待补批次数超过本次确认，请重新确认；未追加调用')
+                    submitted += 1
                     result = _complete(MATCH_SYSTEM, body, api_key=api_key,
                         model=model, tokens=_matching_tokens(missing, batch), cancel=cancel,
                         commit_complete=cache_path is not None)

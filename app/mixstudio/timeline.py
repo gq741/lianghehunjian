@@ -25,7 +25,7 @@ class TimelineShortage(ValueError):
             self.diagnostic['timeline_case'] = plan['replay_case']
 
 
-def _reallocate(pools, sids, required, fade, video_speed):
+def _reallocate(pools, sids, required, fade, video_speed, *, repeat_budget, node_limit):
     """Bounded backtracking of whole allocations, not another greedy ordering.
 
     Reconsider earlier choices when a later sentence is starved. Evidence,
@@ -49,9 +49,6 @@ def _reallocate(pools, sids, required, fade, video_speed):
 
     def visit(unit, first=0, covered=0.):
         nonlocal nodes
-        if nodes >= SEARCH_NODES:
-            return False
-        nodes += 1
         if unit == len(order):
             return True
         i = order[unit]
@@ -61,22 +58,26 @@ def _reallocate(pools, sids, required, fade, video_speed):
             return False
         # Optimistic upper bound only prunes impossible branches. Actual
         # overlap and repeat accounting still checks every proposed choice.
-        if covered + 2*sum((c['end']-c['start'])/video_speed for c in options[i][first:]) + 1e-8 < required[i]:
+        copies = 2 if repeat_budget else 1
+        if covered + copies*sum((c['end']-c['start'])/video_speed for c in options[i][first:]) + 1e-8 < required[i]:
             return False
         for pos in range(first, len(options[i])):
+            # Count rejected candidate probes as work as well. Otherwise many
+            # conflicting source aliases could escape the recursion-node cap.
+            if nodes >= node_limit:
+                break
+            nodes += 1
             c = options[i][pos]
             stats = reuse_stats(selected+[c])
-            if stats['max_uses'] > 2 or stats['repeat_count'] > 2:
+            if stats['max_uses'] > copies or stats['repeat_count'] > repeat_budget:
                 continue
             added = (c['end']-c['start'])/video_speed - (fade if chosen[i] else 0.)
             if added <= 0:
                 continue
             chosen[i].append(c); selected.append(c)
-            if visit(unit, pos, covered+added):
+            if visit(unit, pos if repeat_budget else pos+1, covered+added):
                 return True
             selected.pop(); chosen[i].pop()
-            if nodes >= SEARCH_NODES:
-                break
         return False
 
     if visit(0):
@@ -135,8 +136,18 @@ def _timing_reason(raw, low, high, phase, issue):
 
 
 def shortage_message(plan):
-    detail = '；'.join(f"第{i+1}段缺{s['missing_seconds']:.2f}秒" for i, s in
-                      enumerate(plan['segments']) if s['missing_seconds'] > EPS)
+    categories={'no_candidates':'没有已关联的相关镜头',
+                'candidate_capacity':'已有候选即使独占、复用并慢放也不足',
+                'allocation_unresolved':'现有分配未排齐，不等于原素材不足'}
+    codes={s['segment_id']:s.get('reason_code') for s in plan.get('shortages',[]) if 'segment_id' in s}
+    parts=[]
+    for i,s in enumerate(plan['segments']):
+        if s['missing_seconds'] > EPS:
+            reason=categories.get(codes.get(s.get('segment_id')))
+            parts.append(f"第{i+1}段缺{s['missing_seconds']:.2f}秒"+(f'（{reason}）' if reason else ''))
+    # The table retains every deficit. Keep the job-history error short enough
+    # to retain both cause and next action in its size-limited message.
+    detail='；'.join(parts[:3]) + (f'；共{len(parts)}组有缺口，详见自动时间线' if len(parts)>3 else '')
     constraint = plan.get('timing_constraint', {})
     if constraint.get('status') in {'too_short', 'too_long'}:
         reason = _timing_reason(plan['total_raw_seconds'], constraint['min_seconds'],
@@ -228,7 +239,7 @@ def plan_timeline(segments, scenes, candidates, *, target_seconds, transition_se
                 def coverage(i):
                     return sum((c['end']-c['start'])/video_speed for c in chosen[i])-fade*max(0,len(chosen[i])-1)
                 # Globally exhaust non-overlapping choices before any reuse.
-                for budget in (0, repeat_budget):
+                for budget in ((0,repeat_budget) if repeat_budget else (0,)):
                     for i in order:
                         if coverage(i)+1e-8 >= required[i]:
                             continue
@@ -258,16 +269,45 @@ def plan_timeline(segments, scenes, candidates, *, target_seconds, transition_se
     search_nodes = 0
     video_speed = 1.
     feasible_range = minimum_speed <= maximum_speed + 1e-9 and total >= low
-    result = attempt(speed, 0)
-    if result[0][0] != 0:
-        result = attempt(speed, 2)
-    # Cosmetic dissolve overlap must not force new material or faster speech.
-    # Search the same semantic pool without overlap before slowing pictures.
-    if feasible_range and result[0][0] and fade > 0:
-        fade = 0.
-        result = attempt(speed, 0)
-        if result[0][0]:
-            result = attempt(speed, 2)
+    # Optimistic upper bounds: ignore overlap and competition, but count an
+    # identical original range only once. At most two different ranges can
+    # earn one extra appearance each. Used to prune impossible searches and
+    # to distinguish a proven individual shortage from an unresolved plan.
+    def capacity(keys):
+        spans=[b-a for _,a,b in keys]
+        total=sum(spans)
+        return total, total+sum(sorted(spans,reverse=True)[:2])
+    by_sid={sid:capacity({_identity(c) for c in pools[sid]}) for sid in sids}
+    global_cap=capacity(rarity)
+
+    def search_if_needed(current, budget, picture_speed, probes):
+        nonlocal search_nodes
+        if not current[0][0] or not feasible_range:
+            return current
+        available=min(probes,SEARCH_NODES-search_nodes)
+        needed=current[2]; column=int(bool(budget))
+        if (available<=0 or global_cap[column]/picture_speed + 1e-8 < sum(needed)
+                or any(by_sid[sid][column]/picture_speed + 1e-8 < t for sid,t in zip(sids,needed))):
+            return current
+        repaired,nodes=_reallocate(pools,sids,needed,fade,picture_speed,
+                                  repeat_budget=budget,node_limit=available)
+        search_nodes+=nodes
+        return repaired if repaired is not None else current
+
+    # First try to reassign *different* related shots at natural picture
+    # speed. Prefer a straight cut to repeating a scene just for a dissolve.
+    # Reserve the majority of the global search cap for the last-resort plan.
+    requested_fade=fade
+    result=search_if_needed(attempt(speed,0),0,1.,1500)
+    if feasible_range and result[0][0] and fade:
+        fade=0.
+        result=search_if_needed(attempt(speed,0),0,1.,1500)
+    if result[0][0]:
+        fade=requested_fade
+        result=search_if_needed(attempt(speed,2),2,1.,1500)
+        if feasible_range and result[0][0] and fade:
+            fade=0.
+            result=search_if_needed(attempt(speed,2),2,1.,1500)
     # Only small picture-rate changes; source intervals/reuse identity do not
     # change. Find the least slowdown that covers the existing narration.
     if feasible_range and result[0][0]:
@@ -289,9 +329,7 @@ def plan_timeline(segments, scenes, candidates, *, target_seconds, transition_se
     # strand a later sentence even when a valid global assignment exists.
     # Search before considering faster speech; never add unrelated scenes.
     if feasible_range and result[0][0]:
-        repaired, search_nodes = _reallocate(pools, sids, result[2], fade, video_speed)
-        if repaired is not None:
-            result = repaired
+        result = search_if_needed(result,2,video_speed,SEARCH_NODES)
     if feasible_range and result[0][0] and maximum_speed > speed:
         high_result = attempt(maximum_speed, 2, video_speed)
         if high_result[0][0] == 0:
@@ -328,14 +366,28 @@ def plan_timeline(segments, scenes, candidates, *, target_seconds, transition_se
                'video_speed':local_video_speed, 'candidate_count':len(pools[sid])}
         rows.append(row)
         if missing > 1e-7:
-            shortages.append({**row, 'reason':'相关候选不足' if pools[sid] else '本句没有已关联的相关候选，请重新自动匹配'})
+            upper=by_sid[sid][1]/MIN_VIDEO_SPEED
+            if not pools[sid]:
+                code,reason='no_candidates','本句没有已关联的相关候选，请重新自动匹配'
+            elif upper+1e-7 < raw[i]/maximum_speed:
+                code,reason='candidate_capacity','本组已关联镜头即使独占、允许复用并慢放，时长仍不足'
+            else:
+                code,reason='allocation_unresolved','在候选共用、原片范围和复用限制下，当前搜索尚未排齐；可调整相关镜头'
+            shortages.append({**row, 'reason_code':code, 'reason':reason, 'candidate_upper_seconds':upper})
         lengths = [length/local_video_speed for length in original_lengths]
         wanted = min(sum(lengths), required[i]+fade*max(0,len(clips)-1))
         # Proportional slack reduction keeps every selected transition window viable.
-        floor = min(2*fade+.001, min(lengths, default=.001))
-        slack = sum(max(0.,length-floor) for length in lengths)
+        # A usable short scene must not be trimmed to a sub-frame sliver
+        # merely because a later candidate is long. Protect one visible frame
+        # beyond overlap at the desktop's minimum frame rate, when feasible.
+        # Each floor is limited by its own footage and the group's real budget.
+        floors = [min(length, max(2*fade+.001, fade+1/15)) for length in lengths]
+        reserved = sum(floors)
+        if reserved > wanted:
+            floors = [f*wanted/reserved for f in floors]
+        slack = sum(length-floor for length,floor in zip(lengths,floors))
         reduction = sum(lengths)-wanted
-        for c,length in zip(clips,lengths):
+        for c,length,floor in zip(clips,lengths,floors):
             take = length - (reduction*(length-floor)/slack if slack>0 else 0)
             if take <= 0:
                 continue
@@ -365,7 +417,7 @@ def plan_timeline(segments, scenes, candidates, *, target_seconds, transition_se
             'total_seconds':total/speed,'transition_seconds':fade,'segments':rows,
             'windows':windows,'shortages':shortages,'warnings':warnings,
             'timing_constraint':{'status':timing_issue,'min_seconds':low,'max_seconds':high},
-            'search_strategy':'bounded_multi_order_backtracking_v2', 'search_nodes':search_nodes,
+            'search_strategy':'natural_first_shared_budget_v3', 'search_nodes':search_nodes,
             'covered_seconds':max(0., sum(w['playback_seconds'] for w in windows)-fade*max(0,len(windows)-1)),
             'candidate_count':sum(map(len,pools.values()))}
     # Numeric-only replay: no narration, paths, source hashes, product data or

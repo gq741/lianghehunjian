@@ -230,9 +230,22 @@ def create_app(studio, web_root=None, token=None):
         data = body()
         return ok(studio.download(data.get("links"), data.get("folder")))
 
+    def confirmed_budget(data):
+        if 'expected_budget' not in data:
+            return {}
+        token = data['expected_budget']
+        if not isinstance(token, str) or not token or len(token) > 256:
+            raise ValueError('本次费用确认已失效，请刷新后继续')
+        return {'expected_budget':token}
+
+    @app.get('/api/v2/drafts/<identifier>/production-budget')
+    def production_budget(identifier):
+        return ok(studio.production_budget(identifier, retry=request.args.get('retry') == '1'))
+
     @app.post('/api/v2/jobs/<identifier>/retry')
     def retry_whole(identifier):
-        return ok(studio.retry_whole_job(identifier, body().get('allow_paid')))
+        data = body()
+        return ok(studio.retry_whole_job(identifier, data.get('allow_paid'), **confirmed_budget(data)))
 
     @app.post('/api/v2/preflight')
     def free_preflight():
@@ -243,7 +256,11 @@ def create_app(studio, web_root=None, token=None):
         data = body()
         if 'voice' in data and not isinstance(data['voice'], dict):
             raise ValueError('配音确认信息格式无效，请刷新后重新确认')
-        return ok(studio.produce_whole(identifier, data.get('allow_paid'),
+        replacement = data.get('replace_missing_audio', False)
+        if type(replacement) is not bool or (replacement and (not data.get('expected_budget') or data.get('allow_paid') is not True)):
+            raise ValueError('重新配音需要核对缺失音频并确认本次费用')
+        return ok(studio.produce_whole(identifier, data.get('allow_paid'), **confirmed_budget(data),
+            **({'replace_missing_audio':True} if replacement else {}),
             **({'expected_voice':data['voice']} if 'voice' in data else {})))
 
     @app.post('/api/v2/drafts/<identifier>/realign')

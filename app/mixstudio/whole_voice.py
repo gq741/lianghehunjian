@@ -23,7 +23,7 @@ from .jobs import Cancelled
 from .speech import (selection as speech_selection, validate as validate_speech,
     metadata as speech_metadata, recorded_settings, synthesize as synthesize_speech,
     require_retry_selection, require_confirmed_selection)
-from .v2 import require_script_timing, validate_duration, reusable_matching
+from .v2 import require_script_timing, validate_duration, reusable_matching, has_matching_decision
 from .voice_timing import align_segments
 from .output_names import output_directory, reserve_output
 
@@ -104,8 +104,66 @@ def _pcm_duration(path):
         return count/rate
 
 
+def _audio_snapshot(draft, cache, key, event=None):
+    """No writes, provider calls or credential reads. Used at quote and under the WAV lock."""
+    meta, pending = cache.with_suffix('.json'), cache.with_suffix('.pending.json')
+    receipts = [r for r in (draft.get('whole_audio'), draft.get('whole_voice'))
+                if isinstance(r, dict) and r.get('key') == key]
+    if cache.is_file():
+        duration, signature = _pcm_duration(cache), _hash(cache, event)
+        expected = {'sha256':signature, 'duration':duration, 'key':key}
+        if meta.is_file() and json.loads(meta.read_text(encoding='utf8')) == expected:
+            return 'cached', expected, False
+        journal = json.loads(pending.read_text(encoding='utf8')) if pending.is_file() else {}
+        saved = any(r.get('sha256') == signature and r.get('duration') == duration for r in receipts)
+        if ((journal.get('state') == 'validated' and journal.get('sha256') == signature
+                and journal.get('duration') == duration) or (not meta.exists() and saved)):
+            return 'cached', expected, True
+        raise ValueError('整条配音缓存校验失败或缺少有效校验记录；未自动重新收费')
+    if pending.exists():
+        journal = json.loads(pending.read_text(encoding='utf8'))
+        if not isinstance(journal, dict) or not isinstance(journal.get('attempt'), str) or not journal['attempt']:
+            raise ValueError('整条配音请求记录无效；请核查已有配音记录')
+        return ('missing' if journal.get('state') == 'missing_audio' else 'unknown'), journal['attempt'], False
+    if meta.exists() or receipts:
+        return 'missing', 'unmarked-missing:'+key, False
+    return 'needed', None, False
+
+
+def _saved_timing(draft, audio_record):
+    """Accept a measured map only when its audio, sentence order, text and times agree."""
+    info = draft.get('whole_voice')
+    if (not isinstance(info,dict) or not audio_record or info.get('method') != 'local_asr_word_onsets_v2'
+            or any(info.get(k) != audio_record[k] for k in ('key','sha256','duration'))):
+        return None
+    def number(x):
+        return type(x) in (int,float) and math.isfinite(x) and x >= 0
+    segs, secs, groups, cues = draft['segments'], info.get('segment_seconds'), info.get('sentence_groups'), info.get('captions')
+    if not (isinstance(secs,list) and len(secs)==len(segs) and all(map(number,secs))
+            and abs(sum(secs)-info['duration']) <= .00001 and isinstance(groups,list)
+            and all(isinstance(g,list) and g for g in groups)
+            and [k for g in groups for k in g]==[s['segment_id'] for s in segs]
+            and isinstance(cues,list) and len(cues)==len(groups)
+            and isinstance(info.get('warnings'),list) and all(isinstance(w,str) for w in info['warnings'])):
+        return None
+    start, offset = 0., 0
+    for group, cue in zip(groups,cues):
+        last = offset+len(group)
+        end = start+sum(secs[offset:last])
+        if not (isinstance(cue,dict) and cue.get('segment_id')==group[0]
+                and cue.get('sentence_ids', [group[0]])==group
+                and cue.get('text')==''.join(s['text'] for s in segs[offset:last])
+                and number(cue.get('start')) and number(cue.get('end'))
+                and end>start and abs(start-cue['start'])<=.00001 and abs(end-cue['end'])<=.00001):
+            return None
+        start, offset = end, last
+    return {k:info[k] for k in ('method','captions','segment_seconds','sentence_groups','warnings',
+                                 'coverage','estimated_boundaries') if k in info}
+
+
 class WholeVoiceActions:
-    def _free_preflight(self, asset_ids, event, progress, *, require_config=True, settings_snapshot=None):
+    def _free_preflight(self, asset_ids, event, progress, *, require_config=True, settings_snapshot=None,
+                        required_providers=None, need_alignment=True):
         """Real local I/O and decoder/filter checks, never provider requests."""
         from . import media, providers, script_engine, vision
         settings = self.settings.public() if settings_snapshot is None else dict(settings_snapshot)
@@ -136,18 +194,23 @@ class WholeVoiceActions:
             chosen = speech_selection(settings)
             for name, label in (('deepseek', 'DeepSeek'), ('vision', 'GLM'),
                                 (chosen['provider'], chosen['label'])):
+                if required_providers is not None and name not in required_providers:
+                    continue
                 try:
                     providers._key(self.settings.secret(name))
                 except providers.ProviderError:
                     raise ValueError(f'免费预检：请在设置中检查{label} API Key；尚未调用收费接口') from None
-            script_engine._model(settings['deepseek_model'])
-            vision.validate_config(settings['vision_endpoint'], settings['vision_model'])
-            try:
-                validate_speech(settings)
-            except ValueError as exc:
-                raise ValueError('免费预检：' + str(exc)) from None
+            if required_providers is None or 'deepseek' in required_providers:
+                script_engine._model(settings['deepseek_model'])
+            if required_providers is None or 'vision' in required_providers:
+                vision.validate_config(settings['vision_endpoint'], settings['vision_model'])
+            if required_providers is None or chosen['provider'] in required_providers:
+                try:
+                    validate_speech(settings)
+                except ValueError as exc:
+                    raise ValueError('免费预检：' + str(exc)) from None
             model = Path(settings['asr_model_path'])
-            if (not model.is_absolute() or not all((model/n).is_file()
+            if need_alignment and (not model.is_absolute() or not all((model/n).is_file()
                     for n in ('model.bin', 'config.json', 'tokenizer.json'))
                     or importlib.util.find_spec('faster_whisper') is None):
                 raise ValueError('免费预检：请设置完整的本地语音识别模型，用于整条音频时间对齐；尚未调用收费接口')
@@ -166,6 +229,8 @@ class WholeVoiceActions:
                 versions = getattr(self, '_free_local_versions', {})
                 for script, args in [('voice_alignment_worker.py',['--model',model,'--device',settings['asr_device']]),
                                      ('subtitle_worker.py',[])]:
+                    if not need_alignment and script == 'voice_alignment_worker.py':
+                        continue
                     local_version = (local_versions[script], file_version(Path(__file__).with_name(script)))
                     if versions.get(script) != local_version:
                         code,_ = providers._run_process([sys.executable,'-I','-B','-X','utf8',
@@ -231,7 +296,7 @@ class WholeVoiceActions:
             return self.jobs.submit('preflight', {'asset_ids':identifiers},
                 lambda e, p: self._free_preflight(identifiers, e, p))
 
-    def _whole_audio(self, draft, settings, event, retry_unknown=False):
+    def _whole_audio(self, draft, settings, event, retry_unknown=False, *, cache_only=False, bind_attempt=False):
         from . import providers
         text = draft['voiceover']
         if '<|' in text:
@@ -242,24 +307,29 @@ class WholeVoiceActions:
         marker = cache.with_suffix('.pending.json')
         from .service import _slot
         with _slot(self.voice_slots[int(key[:2],16)], event):
-            if cache.exists():
-                duration = _pcm_duration(cache)
-                signature = _hash(cache)
-                if metadata.exists():
-                    record = json.loads(metadata.read_text(encoding='utf-8'))
-                    if record != {'sha256':signature, 'duration':duration, 'key':key}:
-                        raise ValueError('整条配音缓存校验失败，请检查缓存；未自动重新收费')
-                else:
-                    # Recover only a WAV whose validated digest was durably journaled.
-                    journal = json.loads(marker.read_text(encoding='utf-8')) if marker.exists() else {}
-                    if journal.get('sha256') != signature or journal.get('duration') != duration:
-                        raise ValueError('整条配音缺少有效校验记录；未自动重新收费')
-                    _atomic(metadata, {'sha256':signature, 'duration':duration, 'key':key})
+            state, record, repair = _audio_snapshot(draft, cache, key, event)
+            if state == 'cached':
+                if repair:
+                    _atomic(metadata, record)
                 marker.unlink(missing_ok=True)
-                return cache, key, signature, duration
-            if marker.exists() and (not retry_unknown or json.loads(marker.read_text(encoding='utf-8')).get('attempt') != retry_unknown):
-                raise providers.ProviderError('上次整条配音结果待确认，请核对后点击任务重试，可能再次计费',
-                    code='voice_result_unknown', result_unknown=True)
+                return cache, key, record['sha256'], record['duration']
+            if cache_only:
+                raise ValueError('已确认的本地配音缓存发生变化，请重新确认；未重新付费')
+            if bind_attempt and retry_unknown and (state not in {'missing','unknown'} or retry_unknown != record):
+                raise ValueError('待确认的配音记录已改变，请重新核对本次重试；未提交新的收费请求')
+            if state in {'missing','unknown'}:
+                if state == 'missing' and not marker.exists():
+                    attempt = uuid.uuid4().hex
+                    _atomic(marker, {'attempt':attempt, 'state':'missing_audio'})
+                    if retry_unknown == record:
+                        retry_unknown = attempt
+                    record = attempt
+                if not retry_unknown or retry_unknown != record:
+                    if state == 'missing':
+                        raise providers.ProviderError('已生成的整条配音文件缺失，本次未重新付费；'
+                            '请恢复原音频，或确认接受再次计费后点击此任务的重试', code='invalid_cache')
+                    raise providers.ProviderError('上次整条配音结果待确认，请核对后点击任务重试，可能再次计费',
+                        code='voice_result_unknown', result_unknown=True)
             _cancel(event)
             with tempfile.TemporaryDirectory(prefix='whole-voice-', dir=self.root/'work') as tmp:
                 output = Path(tmp)/'utterance.wav'
@@ -400,7 +470,65 @@ class WholeVoiceActions:
         plan['timing_method'] = draft['whole_voice']['method']
         return plan, groups, scenes
 
-    def retry_whole_job(self, identifier, allow_paid):
+    def _production_quote(self, draft, settings, retry):
+        """Conservative provider upper bound, not a fee estimate or an authorization."""
+        chosen = speech_metadata(settings)
+        key = _audio_key(draft, settings)
+        cache = self.root/'voice-cache'/('whole-v1-'+key+'.wav')
+        message = ''
+        try:
+            voice, record, _ = _audio_snapshot(draft,cache,key)
+            if voice == 'cached':
+                validate_duration(draft['target_seconds'],record['duration'])
+        except (ValueError, OSError, EOFError, wave.Error, TypeError, AttributeError):
+            voice, record = 'invalid', None
+            message = '配音缓存或时长未通过校验，请检查已有音频；本次不会重新计费'
+        timing = _saved_timing(draft,record) if voice == 'cached' else None
+        matching = self._resume_matching_state(draft)
+        blocked = voice == 'invalid' or (voice in {'unknown','missing'} and not retry)
+        if voice == 'unknown':
+            message = '上次配音请求结果待确认，请先核对，再从原任务重试；重新配音可能再次计费'
+        elif voice == 'missing':
+            message = '已有配音文件缺失：可恢复原音频，或明确确认重新生成；重新配音可能再次计费'
+        steps = [chosen['provider']] if voice in {'needed','unknown','missing'} else []
+        semantic_limit = semantic_hits = pending_batch_ids = None
+        if matching == 'needed':
+            steps.extend(['vision','deepseek'])
+        elif matching == 'semantic':
+            from . import providers, script_engine
+            assets = self._v2_assets(draft['asset_ids'])
+            try:
+                pending_batch_ids = set()
+                estimate = script_engine.match_budget(draft['segments'], draft['clips'],
+                    model=settings['deepseek_model'], product_title=draft['product_name'],
+                    cache_dir=self.root/'semantic-cache', _pending_batch_ids=pending_batch_ids, cache_context={'draft_id':draft['id'],
+                        'revision':draft['revision'], 'sources':[{'id':a['id'],'sha256':a['sha256']} for a in assets]})
+                semantic_limit = estimate['new_request_count']
+                semantic_hits = estimate['cached_request_count']
+                if semantic_limit:
+                    steps.append('deepseek')
+            except providers.ProviderError as error:
+                blocked = True
+                message = str(error)
+        public = {'revision':draft['revision'], 'voice_state':voice, 'alignment_state':'cached' if timing else 'local',
+                  'matching_state':matching, 'paid_steps':steps, 'local_only':not steps and not blocked,
+                  'blocked':blocked, 'message':message, 'semantic_new_requests':semantic_limit,
+                  'semantic_cached_batches':semantic_hits}
+        # Opaque quote binds request identity, selected provider and exact unknown
+        # attempt. A stale confirmation cannot grant a newly required provider.
+        public['token'] = _key(['resume-v1', draft['id'], draft['revision'], key, record, bool(retry),
+            draft['asset_ids'], draft['segments'], public, settings['vision_endpoint'], settings['vision_model'],
+            settings['deepseek_model'], draft.get('match_candidates'), draft.get('match_origin'),
+            sorted(pending_batch_ids or ())])
+        return public, record, pending_batch_ids
+
+    def production_budget(self, identifier, *, retry=False):
+        with self.action_lock:
+            draft = self._v2_draft(identifier)
+            require_script_timing(draft)
+            return self._production_quote(draft, self.settings.public(), retry)[0]
+
+    def retry_whole_job(self, identifier, allow_paid, *, expected_budget=None):
         job = self.store.job(identifier)
         if not job or job['kind'] != 'render' or job['status'] not in {'failed','cancelled','interrupted'}:
             raise ValueError('请选择失败、取消或中断的出片任务')
@@ -408,7 +536,8 @@ class WholeVoiceActions:
         if draft['revision'] != job['payload']['revision']:
             raise ValueError('文案或画面选择已修改，请确认当前版本后重新生成')
         require_retry_selection(job['payload'], self.settings.public())
-        return self.produce_whole(draft['id'], allow_paid, retry_unknown=True, retry_payload=job['payload'])
+        return self.produce_whole(draft['id'], allow_paid, retry_unknown=True, retry_payload=job['payload'],
+            **({'expected_budget':expected_budget} if expected_budget is not None else {}))
 
     def realign_whole(self, identifier, *, refresh=False):
         """Local-only repair: require an existing, validated paid utterance."""
@@ -453,7 +582,7 @@ class WholeVoiceActions:
                     current['production_mode'] = 'whole_voice_v1'
                     current.pop('whole_timeline_plan', None)
                     current['timeline_plan'] = None
-                    if current.get('clips') and current.get('match_candidates') is not None:
+                    if has_matching_decision(current):
                         self._apply_timeline(current, settings)
                     else:
                         current['match_status'] = 'pending'
@@ -462,8 +591,11 @@ class WholeVoiceActions:
                         'pipeline':'local_alignment', 'warnings':timing['warnings']}
             return self.jobs.submit('alignment', {'draft_id':identifier,'revision':revision}, work)
 
-    def produce_whole(self, identifier, allow_paid, *, retry_unknown=False, retry_payload=None, expected_voice=None):
-        if allow_paid is not True:
+    def produce_whole(self, identifier, allow_paid, *, retry_unknown=False, retry_payload=None, expected_voice=None, expected_budget=None,
+                      replace_missing_audio=False):
+        if replace_missing_audio and (replace_missing_audio is not True or expected_budget is None or allow_paid is not True):
+            raise ValueError('请核对缺失的原配音并明确确认重新生成费用')
+        if expected_budget is None and allow_paid is not True:
             raise ValueError('请确认整条配音、GLM识别与DeepSeek匹配的本次费用')
         with self.action_lock:
             draft = self._v2_draft(identifier)
@@ -480,7 +612,20 @@ class WholeVoiceActions:
             voice_binding = speech_metadata(settings)
             revision = draft['revision']
             retry_attempt = None
-            if retry_unknown:
+            budget = None
+            if expected_budget is not None:
+                budget, record, pending_batch_ids = self._production_quote(draft, settings, retry_unknown or replace_missing_audio)
+                if budget['token'] != expected_budget:
+                    raise ValueError('当前阶段或缓存状态已改变，请重新确认本次出片步骤')
+                if replace_missing_audio and budget['voice_state'] != 'missing':
+                    raise ValueError('此操作仅可替换已核实缺失的本地配音；请重新确认当前状态')
+                if budget['blocked']:
+                    raise ValueError(budget['message'])
+                if budget['paid_steps'] and allow_paid is not True:
+                    raise ValueError('请确认本次仍可能发生费用的步骤')
+                if (retry_unknown or replace_missing_audio) and budget['voice_state'] in {'missing','unknown'}:
+                    retry_attempt = record
+            elif retry_unknown:
                 vk = _audio_key(draft, settings)
                 pending = self.root/'voice-cache'/('whole-v1-'+vk+'.pending.json')
                 if pending.exists() and not (self.root/'voice-cache'/('whole-v1-'+vk+'.wav')).exists():
@@ -489,9 +634,11 @@ class WholeVoiceActions:
                 from . import media
                 from .timeline import TimelineShortage
                 self._free_preflight(draft['asset_ids'], event, lambda v,m:progress(.1*v,m),
-                                     settings_snapshot=settings)
+                                     settings_snapshot=settings, **({'required_providers':budget['paid_steps'],
+                                         'need_alignment':budget['alignment_state'] != 'cached'} if budget else {}))
                 progress(.12, '整条配音 · 复用成功缓存或一次生成完整口播')
-                audio, key, signature, duration = self._whole_audio(draft,settings,event,retry_attempt)
+                audio, key, signature, duration = self._whole_audio(draft,settings,event,retry_attempt,
+                    **({'cache_only':voice_binding['provider'] not in budget['paid_steps'], 'bind_attempt':True} if budget else {}))
                 saved = self._v2_draft(identifier)
                 saved['whole_audio'] = {'path':str(audio),'key':key,'sha256':signature,'duration':duration,
                                         **voice_binding}
@@ -499,8 +646,10 @@ class WholeVoiceActions:
                 _cancel(event)
                 progress(.23, f'整条配音已保存，实测{duration:.3f}秒；正在本地对齐文案')
                 from .v2 import visual_slot
-                with visual_slot(self.asr_slot, event):
-                    timing = self._align_whole(draft,audio,signature,duration,settings,event)
+                timing = _saved_timing(draft, saved['whole_audio']) if budget else None
+                if timing is None:
+                    with visual_slot(self.asr_slot, event):
+                        timing = self._align_whole(draft,audio,signature,duration,settings,event)
                 with self.action_lock:
                     current = self._v2_draft(identifier)
                     if current['revision'] != revision:
@@ -510,7 +659,11 @@ class WholeVoiceActions:
                     current['production_mode'] = 'whole_voice_v1'
                     # Capture semantic readiness before clearing timing-only
                     # views; deliberate empty selections must not be refilled.
-                    reuse_matching = reusable_matching(current)
+                    matching_stage = (self._resume_matching_state(current) if budget else
+                                      ('cached' if reusable_matching(current) else 'needed'))
+                    reuse_matching = matching_stage == 'cached'
+                    if budget and matching_stage == 'needed' and 'vision' not in budget['paid_steps']:
+                        raise ValueError('画面识别缓存发生变化，请重新确认；未追加 GLM 调用')
                     # The old plan references previous sentence timings. Clear
                     # both views in the same commit, including a later cancel.
                     current.update(timeline_plan=None, whole_timeline_plan=None,
@@ -519,12 +672,19 @@ class WholeVoiceActions:
                 _cancel(event)
                 if not reuse_matching:
                     progress(.3, '画面分析与匹配 · 使用真实音频时间轴')
-                    self._match_operation(current,settings)(event,lambda v,m:progress(.3+.45*v,m))
-                current = self._v2_draft(identifier)
-                plan = self._apply_timeline(current, settings)
+                    self._match_operation(current, settings, **({'reuse_visual':matching_stage == 'semantic',
+                        'allow_semantic':'deepseek' in budget['paid_steps'],
+                        'semantic_limit':budget['semantic_new_requests'], 'allowed_batches':pending_batch_ids} if budget else {}))(
+                            event,lambda v,m:progress(.3+.45*v,m))
+                    current = self._v2_draft(identifier)
+                    if current['revision'] != revision:
+                        raise ValueError('文案版本已改变，请重新确认')
+                    plan = current['timeline_plan']  # Already solved and committed by the matcher.
+                else:
+                    plan = self._apply_timeline(current, settings)
+                    self.store.put_draft(current)
                 groups = plan['visual_groups']
                 scenes = self._timeline_inputs(current)[0]
-                self.store.put_draft(current)
                 if plan['status'] != 'ready':
                     raise TimelineShortage(plan)
                 _cancel(event)

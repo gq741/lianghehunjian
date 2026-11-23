@@ -11,7 +11,7 @@ from .jobs import Cancelled
 from .product import normalize_jd_link, validate_product
 
 
-def reusable_matching(draft):
+def has_matching_decision(draft):
     """Visual analysis alone is not a completed semantic match.
 
     Editing copy or invalidating old scene IDs clears candidates and marks the
@@ -19,8 +19,14 @@ def reusable_matching(draft):
     """
     candidates = draft.get('match_candidates')
     return bool(draft.get('clips') and candidates is not None
-                and draft.get('analysis_summary', {}).get('complete') is True
                 and not (draft.get('match_status') == 'pending' and not candidates))
+
+
+def reusable_matching(draft):
+    # An explicit user selection is final even if only part of the source
+    # footage was analyzed. Automatic partial results may be completed later.
+    return has_matching_decision(draft) and (draft.get('match_origin') == 'manual' or
+                draft.get('analysis_summary', {}).get('complete') is True)
 
 
 @contextmanager
@@ -125,6 +131,8 @@ class V2Actions:
         if not product:
             raise ValueError('请先读取京东商品标题')
         product = validate_product(product)
+        if 'expected_product' in payload and payload['expected_product'] != {k:product[k] for k in ('sku','title')}:
+            raise ValueError('当前商品已改变，请核对商品标题后重新确认生成')
         assets = self._v2_assets(payload.get('asset_ids'))
         settings = self.settings.public()
         target, count = payload.get('target_seconds', 25), payload.get('count', 1)
@@ -190,6 +198,7 @@ class V2Actions:
                          status='draft', match_status='pending', matches=[], match_candidates=[], timeline_plan=None)
             draft.pop('whole_audio', None)
             draft.pop('whole_voice', None)
+            draft.pop('match_origin', None)
             draft.pop('whole_timeline_plan', None)
             draft.update(timing_fields(draft['voiceover'], draft['target_seconds']))
             draft.update(fact_status='not_required', fact_issues=[])
@@ -219,7 +228,22 @@ class V2Actions:
             work = self._match_operation(draft, settings)
             return self.jobs.submit('match', {'draft_id': identifier, 'revision': revision}, work)
 
-    def _match_operation(self, draft, settings):
+    def _resume_matching_state(self, draft):
+        if reusable_matching(draft):
+            return 'cached'
+        scenes = draft.get('clips') or []
+        if not scenes or (draft.get('analysis_summary') or {}).get('complete') is not True:
+            return 'needed'
+        # The recognized set is not the semantic decision. Reuse it across
+        # text-only edits, but not when sources no longer match the registration.
+        if {c.get('asset_id') for c in scenes} != set(draft['asset_ids']):
+            return 'needed'
+        self._validate_matches(draft,[{'segment_id':draft['segments'][0]['segment_id'],
+            'clip_ids':[c['clip_id'] for c in scenes if c.get('usable') is True]}],
+            allow_incomplete=True, candidate_limit=4500)
+        return 'semantic'
+
+    def _match_operation(self, draft, settings, *, reuse_visual=False, allow_semantic=True, semantic_limit=None, allowed_batches=None):
         from . import vision, script_engine, providers
         identifier, revision = draft['id'], draft['revision']
         def work(event, progress):
@@ -228,10 +252,17 @@ class V2Actions:
             scenes, warnings = [], []
             summary = {'planned': 0, 'completed': 0, 'pending': 0,
                        'failed_batches': [], 'complete': True}
+            if reuse_visual:
+                if self._resume_matching_state(draft) != 'semantic':
+                    raise ValueError('已确认的画面分析缓存发生变化，请重新确认；未调用画面模型')
+                scenes = list(draft['clips'])
+                warnings = list(draft.get('analysis_warnings') or [])
+                summary.update(draft['analysis_summary'])
+                progress(.7, '已复用全部画面识别结果，不再调用 GLM')
             pause_new_requests = False
             # Local vision sampling and paid batches are deliberately serial.
             with visual_slot(self.asr_slot, event):
-                for i, asset in enumerate(assets):
+                for i, asset in enumerate(() if reuse_visual else assets):
                     self._unchanged(asset, event)
                     stage = f'画面识别 · 素材 {i+1}/{len(assets)}'
                     progress(.05 + .65 * i / len(assets), stage)
@@ -279,6 +310,7 @@ class V2Actions:
                     previous_ids = {cid for choice in previous
                                     for cid in choice['clip_ids']}
                     if not previous_ids.issubset(known_ids):
+                        current.pop('match_origin', None)
                         current.update(matches=[], match_candidates=[], timeline_plan=None,
                                        whole_timeline_plan=None, match_status='pending')
                     current.update(clips=scenes, analysis_summary=summary,
@@ -287,10 +319,13 @@ class V2Actions:
                 if not any(scene.get('usable') for scene in scenes):
                     result = {'matches': [], 'unmatched':[s['segment_id'] for s in draft['segments']]}
                 else:
-                    progress(.8, 'DeepSeek 画面匹配 · 按文案自动选择已分析的相关画面')
+                    progress(.8, 'DeepSeek 画面匹配 · 按文案自动选择已分析的相关画面' if allow_semantic
+                             else '本地合并已缓存的语义匹配，不调用 DeepSeek')
                     try:
                         result = script_engine.match_segments(draft['segments'], scenes,
-                            api_key=self.settings.secret('deepseek'), model=settings['deepseek_model'],
+                            api_key=self.settings.secret('deepseek') if allow_semantic else None,
+                            model=settings['deepseek_model'], **({'cache_only':True} if not allow_semantic else {}),
+                            **({'max_new_requests':semantic_limit, 'allowed_batches':allowed_batches} if semantic_limit is not None else {}),
                             product_title=draft['product_name'], cancel=event,
                             cache_dir=self.root / 'semantic-cache',
                             cache_context={'draft_id':identifier, 'revision':revision,
@@ -310,6 +345,7 @@ class V2Actions:
                 # _apply_timeline validates and normalizes this pool once,
                 # then shares the same request-local records with planning.
                 current['match_candidates'] = ranked
+                current.pop('match_origin', None)
                 current['matching_metadata'] = {k:result[k] for k in
                     ('evaluated_scene_count','semantic_batch_count','selection_policy') if k in result}
                 self._apply_timeline(current, settings)
@@ -443,7 +479,7 @@ class V2Actions:
             # not silently reappear in the next automatic allocation. Validation
             # and planning share a request-local snapshot before anything saves.
             draft.pop('whole_timeline_plan', None)
-            draft.update(match_candidates=matches, revision=draft['revision']+1)
+            draft.update(match_candidates=matches, match_origin='manual', revision=draft['revision']+1)
             self._apply_timeline(draft, self.settings.public())
             return self.store.put_draft(draft)
 

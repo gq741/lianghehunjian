@@ -5,6 +5,7 @@ ChangeTime in addition to file identity, length and write time. If the driver
 cannot supply that information, callers retain full-hash validation per request.
 """
 from collections import OrderedDict
+from contextlib import contextmanager
 import os
 from pathlib import Path
 import threading
@@ -54,6 +55,22 @@ def file_version(path):
         return None
 
 
+@contextmanager
+def _acquire(slot, check_cancel):
+    if check_cancel is None:
+        with slot:
+            yield
+        return
+    check_cancel()
+    while not slot.acquire(timeout=.1):
+        check_cancel()
+    try:
+        check_cancel()
+        yield
+    finally:
+        slot.release()
+
+
 class MediaIdentityCache:
     """One hash per file version; no paths or digests persist beyond this run."""
     def __init__(self, max_entries=512):
@@ -62,10 +79,10 @@ class MediaIdentityCache:
         self._lock = threading.Lock()
         self._slots = [threading.Lock() for _ in range(64)]
 
-    def signature(self, path, compute):
+    def signature(self, path, compute, *, check_cancel=None):
         key = os.path.normcase(os.path.abspath(path))
         # Fixed stripes bound lock memory independently of the number of files.
-        with self._slots[hash(key) % len(self._slots)]:
+        with _acquire(self._slots[hash(key) % len(self._slots)], check_cancel):
             before = file_version(path)
             with self._lock:
                 cached = self._entries.get(key)
@@ -75,7 +92,7 @@ class MediaIdentityCache:
                 self._entries.pop(key, None)
             signature = compute(path)
             after = file_version(path)
-            if before is not None and after is not None:
+            if before is not None:
                 if before != after:
                     raise ValueError('素材读取期间发生改变，请重新读取')
                 with self._lock:

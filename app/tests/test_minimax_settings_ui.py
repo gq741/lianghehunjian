@@ -250,7 +250,7 @@ assert.equal($('voice-provider-label').textContent,'MiniMax');
 assert.ok($('confirm-description').textContent.includes('Fish Audio 配音'));
 event($('confirm-accept'),'click');await flush();
 assert.equal(writes().length,1);assert.equal(writes()[0].path,'/api/v2/drafts/voice/produce');
-assert.deepEqual(writes()[0].body,{allow_paid:true,voice:{provider:'fish',model:'s2.1-pro',voice_id:'fish-consented-voice'}});
+assert.deepEqual(writes()[0].body,{allow_paid:true,expected_budget:'fixture-budget',voice:{provider:'fish',model:'s2.1-pro',voice_id:'fish-consented-voice'}});
 })().catch(e=>{console.error(e);process.exitCode=1;});
 ''')
 
@@ -264,7 +264,7 @@ assert.ok($('confirm-description').textContent.includes('MiniMax 配音'));
 data.settings.minimax_model='speech-2.8-turbo';data.settings.minimax_voice_id='other-custom-voice';
 timer();await flush();event($('confirm-accept'),'click');await flush();
 assert.equal(writes().length,1);
-assert.deepEqual(writes()[0].body,{allow_paid:true,voice:{provider:'minimax',model:'speech-2.8-hd',voice_id:'male-qn-qingse'}});
+assert.deepEqual(writes()[0].body,{allow_paid:true,expected_budget:'fixture-budget',voice:{provider:'minimax',model:'speech-2.8-hd',voice_id:'male-qn-qingse'}});
 })().catch(e=>{console.error(e);process.exitCode=1;});
 ''')
 

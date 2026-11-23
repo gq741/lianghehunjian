@@ -35,8 +35,8 @@
     },
     {
       "path": "mixstudio/http_app.py",
-      "bytes": 14955,
-      "sha256": "9d71ba0523769967319833cd51de692275f1db336389d1cca5e968932c086cac"
+      "bytes": 16281,
+      "sha256": "8e92a0a4d1257614c9f9059d98be7bb36417d00e5eace371b3d4b58f0c73154a"
     },
     {
       "path": "mixstudio/instance.py",
@@ -55,8 +55,8 @@
     },
     {
       "path": "mixstudio/media_identity.py",
-      "bytes": 3578,
-      "sha256": "51cf162394e7a1bba9cae1fd39cb056576c7174d8b5426f8cb3ebae4f6e58477"
+      "bytes": 3937,
+      "sha256": "d93e288a2921143de649187224d77d4fb8e0cf20d501f6179ff9c5807c22bf56"
     },
     {
       "path": "mixstudio/music_actions.py",
@@ -95,8 +95,8 @@
     },
     {
       "path": "mixstudio/script_engine.py",
-      "bytes": 40968,
-      "sha256": "b1ab997a94c96d583c9e83cefc54f5f498ec416bf742080f58c8408d727a6e8f"
+      "bytes": 42100,
+      "sha256": "d3c9fe8f3c23b9ee6ba13f90a4666d76ab3181a0ed07e2fa8c815d4aa1e42d0c"
     },
     {
       "path": "mixstudio/semantic_cache.py",
@@ -105,8 +105,8 @@
     },
     {
       "path": "mixstudio/service.py",
-      "bytes": 60806,
-      "sha256": "6096be7a935d131482a3b8d17f952a4c1b300feb22bc8d02274d502299b14494"
+      "bytes": 61545,
+      "sha256": "80b3ed9b0836c9ee93e16dce38b6428ca89eb1b88e1f0e70f853c6df5b69012d"
     },
     {
       "path": "mixstudio/settings.py",
@@ -145,18 +145,18 @@
     },
     {
       "path": "mixstudio/timeline.py",
-      "bytes": 20423,
-      "sha256": "30c3acb2db527b8f1538f715a7b67123d2b0379118c58e47bec543597ccf4dd0"
+      "bytes": 23895,
+      "sha256": "67fb2246d845b362e25a5b92a9b44cf1e5decf15c71984858ebc73b50ff8f4d5"
     },
     {
       "path": "mixstudio/updates.py",
       "bytes": 9283,
-      "sha256": "e9d22b843f4b4f14d1da58f55c626cc5f20b895a1bf28a77b4b8483c81b6aa78"
+      "sha256": "1f850e567022eb35f7f31286d1efb2537710fc7a6421471f130effbb86a4bc79"
     },
     {
       "path": "mixstudio/v2.py",
-      "bytes": 28267,
-      "sha256": "15c4e85031928979eb36ea6856f072b4ede0329dc5de93559b76714229733a35"
+      "bytes": 30711,
+      "sha256": "c530e927429a13f5c35568f2948396c441ad6fb54224cf36d4510459259c3178"
     },
     {
       "path": "mixstudio/vision.py",
@@ -175,8 +175,8 @@
     },
     {
       "path": "mixstudio/whole_voice.py",
-      "bytes": 34950,
-      "sha256": "c9e61519cafa943ac08ed27553c80d6554d3f9f10772fa6e0d8a602745905edc"
+      "bytes": 46689,
+      "sha256": "46d79cca8fbfc2c77a7dd68ee2c837612a2deb4d573d2a8ac3c2e30f2e6ccea9"
     },
     {
       "path": "prompts/narration-v2.md",
@@ -200,8 +200,8 @@
     },
     {
       "path": "tools/apply_update.py",
-      "bytes": 19936,
-      "sha256": "3b52c4a87fe2d5fbefa2ee6c3db3f4e656c08dbf716fcbae38c04c02cd4bd294"
+      "bytes": 22376,
+      "sha256": "10e707bdb00eac29ebaa9055b20dfdc7ec690f45c637448125cf10b0618e5c9e"
     },
     {
       "path": "tools/portable_boot.py",
@@ -215,8 +215,8 @@
     },
     {
       "path": "web/app.js",
-      "bytes": 119909,
-      "sha256": "0f33473ab6739f98c22480b0ef124df1f9ddf0bde9eeb45ae8fd07b99a04509a"
+      "bytes": 123850,
+      "sha256": "56227035e2df04afa061584580a1bb1661eee0655d11e153e677c664fa731785"
     },
     {
       "path": "web/brand-icon.ico",
@@ -250,6 +250,6 @@
     "FILES.sha256.json"
   ],
   "receipt": "SOURCE_UPDATE.json",
-  "version": "2026.11.05",
-  "parent_commit": "d0724f9df90cc7fc98ee1a7a9c119f0c1f50fe48"
+  "version": "2026.11.23",
+  "parent_commit": "55db9d5ebcd20c87d200fe418d24caac251ce471"
 }
